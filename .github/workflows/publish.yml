@@ -77,7 +77,7 @@ jobs:
 
       - name: Build static site
         working-directory: publisher
-        run: python3 scripts/build_site.py --sources-root . --output _site
+        run: python3 scripts/build_site.py --sources-root . --output _site --public-base-path /ocp-developers-s3_storage_li9_docsrepo
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4

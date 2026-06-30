@@ -5,6 +5,7 @@ import argparse
 import datetime as dt
 import html
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -111,10 +112,38 @@ def write_source_report(output: Path, records: list[dict[str, str]]) -> None:
     (output / "docs-sources.html").write_text(page, encoding="utf-8")
 
 
+def normalize_public_base_path(value: str) -> str:
+    value = value.strip()
+    if not value:
+        return ""
+    if not value.startswith("/"):
+        value = "/" + value
+    return value.rstrip("/")
+
+
+def rewrite_root_relative_links(output: Path, public_base_path: str) -> None:
+    public_base_path = normalize_public_base_path(public_base_path)
+    if not public_base_path:
+        return
+    pattern = re.compile(r'\b(href|src)="(/(?!/)[^"]*)"')
+
+    def replace(match: re.Match[str]) -> str:
+        attr = match.group(1)
+        value = match.group(2)
+        return f'{attr}="{public_base_path}{value}"'
+
+    for page in output.rglob("*.html"):
+        content = page.read_text(encoding="utf-8")
+        updated = pattern.sub(replace, content)
+        if updated != content:
+            page.write_text(updated, encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--sources-root", default=".")
     parser.add_argument("--output", default="_site")
+    parser.add_argument("--public-base-path", default="")
     args = parser.parse_args()
 
     root = Path(args.sources_root).resolve()
@@ -163,6 +192,7 @@ def main() -> int:
         encoding="utf-8",
     )
     write_source_report(output, records)
+    rewrite_root_relative_links(output, args.public_base_path)
     print(json.dumps(metadata, indent=2, sort_keys=True))
     return 0
 

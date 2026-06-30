@@ -118,6 +118,7 @@ def main() -> int:
     parser.add_argument("--source-ref", default="main")
     parser.add_argument("--output-branch", default="gh-pages")
     parser.add_argument("--repo-url", default=os.environ.get("DOCS_PUBLIC_REPOSITORY_URL", REPOSITORY))
+    parser.add_argument("--public-base-path", default=os.environ.get("DOCS_PUBLIC_BASE_PATH", ""))
     parser.add_argument("--publish", action="store_true")
     args = parser.parse_args()
 
@@ -131,7 +132,10 @@ def main() -> int:
         askpass = write_askpass(Path(tmp))
         env = auth_env(askpass)
         clone_sources(root, args.source_ref, env)
-        run(["python3", "scripts/build_site.py", "--sources-root", ".", "--output", "_site"], cwd=root, env=env)
+        build_args = ["python3", "scripts/build_site.py", "--sources-root", ".", "--output", "_site"]
+        if args.public_base_path:
+            build_args.extend(["--public-base-path", args.public_base_path])
+        run(build_args, cwd=root, env=env)
         if args.publish:
             publish_branch(root, args.repo_url, args.output_branch, env)
     return 0
