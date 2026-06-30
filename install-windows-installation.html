@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Windows Packages Installation - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub active" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Windows Packages</div>
+        <h1>Windows Packages: Installation.</h1>
+        <p class="lede">Run the production installation procedure with copy-paste commands and field references.</p>
+      </section>
+
+      <h2>Installation</h2>
+      <div class="procedure">
+        <div class="procedure-item"><div><h3>1. Prepare OS resources</h3><p>Create persistent directories and firewall rules on every server.</p></div></div>
+        <div class="procedure-item"><div><h3>2. Install MSI or ZIP</h3><p>Use the MSI wizard for an interactive Windows install, or PowerShell for unattended MSI/ZIP rollout.</p></div></div>
+        <div class="procedure-item"><div><h3>3. Write configuration</h3><p>Place cluster configuration on every node.</p></div></div>
+        <div class="procedure-item"><div><h3>4. Bootstrap, join, and start</h3><p>Initialize the first node, join the remaining nodes, start the Windows service, and verify health.</p></div></div>
+        <div class="procedure-item"><div><h3>5. Verify S3 and failure behavior</h3><p>Write from an external AWS CLI client while one node is stopped.</p></div></div>
+      </div>
+
+      <h3>1. Prepare Each Server</h3>
+      <pre><code>New-Item -ItemType Directory -Force C:\Temp
+New-Item -ItemType Directory -Force "$env:ProgramData\Li9\S3Storage\config"
+New-Item -ItemType Directory -Force "$env:ProgramData\Li9\S3Storage\data"
+New-Item -ItemType Directory -Force "$env:ProgramData\Li9\S3Storage\logs"
+New-NetFirewallRule -DisplayName "Li9 S3 Client" -Direction Inbound -Protocol TCP -LocalPort 9000 -Action Allow
+New-NetFirewallRule -DisplayName "Li9 S3 Control" -Direction Inbound -Protocol TCP -LocalPort 9001-9010 -Action Allow</code></pre>
+
+      <h3>2. Install MSI Or ZIP</h3>
+      <p>Use the <a href="https://github.com/digital-iq/ocp-developers-s3_storage_li9_windowsrepo/releases/download/v1.1.0-alpha.14/">Windows package release</a> as the connected source, or replace <code>$ReleaseBase</code> with your internal mirror URL in disconnected environments. Windows supports both a graphical MSI installation and an unattended PowerShell installation.</p>
+
+      <h4>Graphical MSI Installation</h4>
+      <ol>
+        <li>Download <code>li9-s3-storage-windows-1.1.0-alpha.14.msi</code> and <code>checksums.txt</code> from the Windows package release or from your internal mirror.</li>
+        <li>Verify the MSI checksum before running the installer. If Windows marks the file as downloaded from the internet, open file properties and unblock it only after the checksum matches.</li>
+        <li>Double-click the MSI from File Explorer or start it from an elevated PowerShell session with <code>Start-Process msiexec.exe -ArgumentList "/i `"$Msi`"" -Wait</code>.</li>
+        <li>In the installer wizard, keep the default installation folder unless your Windows operations standard requires a different path.</li>
+        <li>Complete the wizard and approve the UAC prompt when Windows asks for administrator permissions.</li>
+        <li>After the wizard finishes, open Services and confirm that the Li9 S3 services are registered. Do not start the cluster until step 3 writes the same cluster configuration on every node.</li>
+      </ol>
+      <table>
+        <thead><tr><th>Wizard Decision</th><th>Recommended Selection</th><th>Why It Matters</th></tr></thead>
+        <tbody>
+          <tr><td>Package source</td><td>Public release MSI or an internally mirrored MSI with matching checksum.</td><td>Prevents installing an unverified or stale package.</td></tr>
+          <tr><td>Install folder</td><td><code>C:\Program Files\Li9\S3Storage</code>.</td><td>Keeps binaries in the standard managed application path.</td></tr>
+          <tr><td>Service registration</td><td>Allow the MSI to register Windows services.</td><td>Step 4 starts the services only after configuration is rendered.</td></tr>
+          <tr><td>Post-install state</td><td>Services registered, cluster not started yet.</td><td>Prevents nodes from starting with incomplete or mismatched cluster configuration.</td></tr>
+        </tbody>
+      </table>
+
+      <h4>PowerShell Installation</h4>
+      <pre><code>$Li9NativeVersion = "1.1.0-alpha.14"
+if (-not $ReleaseBase) { throw "Set ReleaseBase to the Windows package release or internal mirror URL." }
+$Msi = "C:\Temp\li9-s3-storage-windows-$Li9NativeVersion.msi"
+$Zip = "C:\Temp\li9-s3-storage-windows-$Li9NativeVersion.zip"
+$Checksums = "C:\Temp\li9-s3-storage-windows-checksums.txt"
+
+Invoke-WebRequest "$ReleaseBase/li9-s3-storage-windows-$Li9NativeVersion.msi" -OutFile $Msi
+Invoke-WebRequest "$ReleaseBase/li9-s3-storage-windows-$Li9NativeVersion.zip" -OutFile $Zip
+Invoke-WebRequest "$ReleaseBase/checksums.txt" -OutFile $Checksums
+Get-FileHash $Msi, $Zip -Algorithm SHA256
+Get-Content $Checksums
+
+if (Test-Path $Msi) {
+  msiexec.exe /i $Msi /qn /norestart
+  $InstallDir = "C:\Program Files\Li9\S3Storage"
+} elseif (Test-Path $Zip) {
+  $InstallDir = "C:\Li9\S3Storage"
+  if (Test-Path $InstallDir) { Remove-Item -Recurse -Force $InstallDir }
+  New-Item -ItemType Directory -Force $InstallDir | Out-Null
+  Expand-Archive $Zip $InstallDir -Force
+} else {
+  throw "Expected $Msi or $Zip from the Windows release repository."
+}
+&amp; "$InstallDir\scripts\Install-Li9S3Services.ps1" -InstallDir $InstallDir -SkipRenderConfig
+Get-ChildItem "$InstallDir\bin"</code></pre>
+
+      <h3>3. Configure The Cluster</h3>
+      <p>Generate one shared fencing token and one shared KMS master key once, store them in your secret manager, and reuse the same values on every node. The example below uses three storage nodes and runs the control/gateway services on the first node.</p>
+      <pre><code>$Li9Region = "li9-mgm01"
+$Li9AllowedRegions = "li9-mgm01,us-east-1"
+$Li9Scheme = "http"
+$Li9ControlHost = "10.20.10.11"
+$Li9GatewayHost = "10.20.10.11"
+$Li9StorageNodeUrls = "${Li9Scheme}://10.20.10.11:9008,${Li9Scheme}://10.20.10.12:9008,${Li9Scheme}://10.20.10.13:9008"
+$Li9WriteQuorum = 2
+$Li9FencingToken = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+$Li9KmsMasterKeyB64 = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+
+# Run on node 1:
+&amp; "$InstallDir\scripts\Render-Li9S3Config.ps1" `
+  -NodeHost "127.0.0.1" `
+  -ControlHost "127.0.0.1" `
+  -GatewayHost $Li9GatewayHost `
+  -StorageNodeUrls "${Li9Scheme}://127.0.0.1:9008,${Li9Scheme}://10.20.10.12:9008,${Li9Scheme}://10.20.10.13:9008" `
+  -WriteQuorum $Li9WriteQuorum `
+  -FencingToken $Li9FencingToken `
+  -KmsMasterKeyB64 $Li9KmsMasterKeyB64 `
+  -Region $Li9Region `
+  -AllowedRegions $Li9AllowedRegions
+
+# Run on node 2 and node 3 with each node's own NodeHost:
+&amp; "$InstallDir\scripts\Render-Li9S3Config.ps1" `
+  -NodeHost "127.0.0.1" `
+  -ControlHost $Li9ControlHost `
+  -GatewayHost $Li9GatewayHost `
+  -StorageNodeUrls $Li9StorageNodeUrls `
+  -WriteQuorum $Li9WriteQuorum `
+  -FencingToken $Li9FencingToken `
+  -KmsMasterKeyB64 $Li9KmsMasterKeyB64 `
+  -Region $Li9Region `
+  -AllowedRegions $Li9AllowedRegions</code></pre>
+
+      <h3>Windows Configuration Properties</h3>
+      <table>
+        <thead><tr><th>Property</th><th>Description</th><th>Allowed Or Recommended Values</th></tr></thead>
+        <tbody>
+          <tr><td><code>-NodeHost</code></td><td>Address used by local services on this host.</td><td><code>127.0.0.1</code> for local process wiring, or a routable host address when services are split.</td></tr>
+          <tr><td><code>-ControlHost</code></td><td>Host running control-api, identity, policy, bucket, metadata, KMS, and audit services.</td><td>First node IP or DNS in the verified native layout.</td></tr>
+          <tr><td><code>-GatewayHost</code></td><td>Host returned to S3 clients by the control API.</td><td>Load balancer, DNS name, or first node IP for a lab install.</td></tr>
+          <tr><td><code>-StorageNodeUrls</code></td><td>Comma-separated storage-node URLs used by object-service and healing-service.</td><td>Example: three storage-node HTTP endpoints on port <code>9008</code>.</td></tr>
+          <tr><td><code>-WriteQuorum</code></td><td>Number of storage-node writes required before an object write is committed.</td><td><code>1</code> for single-node, <code>2</code> for three nodes.</td></tr>
+          <tr><td><code>-FencingToken</code></td><td>Shared token used to reject stale storage writes.</td><td>Same 32-byte base64 value on all nodes.</td></tr>
+          <tr><td><code>-KmsMasterKeyB64</code></td><td>Shared KMS/SSE master key.</td><td>Same 32-byte base64 value on all nodes.</td></tr>
+          <tr><td><code>-Region</code></td><td>Default S3 region.</td><td>Example: <code>li9-mgm01</code>; default is <code>us-east-1</code>.</td></tr>
+          <tr><td><code>-AllowedRegions</code></td><td>Comma-separated accepted S3 regions.</td><td>Must include the default region.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4. Bootstrap, Join, And Start</h3>
+      <pre><code># Run on every storage node:
+&amp; "$InstallDir\scripts\Start-Li9S3Services.ps1" -InstallDir $InstallDir -Services @("storage-node")
+
+# Run on the control/gateway node:
+&amp; "$InstallDir\scripts\Start-Li9S3Services.ps1" -InstallDir $InstallDir -Services @(
+  "control-api",
+  "identity-service",
+  "policy-service",
+  "bucket-service",
+  "metadata-service",
+  "kms-service",
+  "audit-service",
+  "object-service",
+  "s3-gateway"
+)
+
+Invoke-WebRequest "${Li9Scheme}://127.0.0.1:9001/v1/info" -UseBasicParsing
+Invoke-WebRequest "${Li9Scheme}://127.0.0.1:9000/v1/info" -UseBasicParsing
+Invoke-WebRequest "${Li9Scheme}://127.0.0.1:9008/v1/info" -UseBasicParsing</code></pre>
+      <figure class="docs-screenshot">
+        <img src="assets/screenshots/windows-services-installed.png" alt="Windows Services view showing Li9 S3 services running after installation" loading="lazy">
+        <figcaption>Expected Windows service state after MSI or ZIP service registration.</figcaption>
+      </figure>
+
+      <h3>5. Verify S3 And Node Failure</h3>
+      <pre><code>$env:S3_ENDPOINT = "${Li9Scheme}://${Li9GatewayHost}:9000"
+$env:AWS_DEFAULT_REGION = "li9-mgm01"
+$Body = @{
+  bucketName = "windows-install-check"
+  region = $env:AWS_DEFAULT_REGION
+  issueCredential = $true
+} | ConvertTo-Json -Compress
+$ProvisionJson = curl.exe -k `
+  -H "Content-Type: application/json" `
+  -d $Body `
+  "${Li9Scheme}://${Li9ControlHost}:9001/v1/s3-bucket-provisions"
+$Provision = $ProvisionJson | ConvertFrom-Json
+$env:AWS_ACCESS_KEY_ID = $Provision.accessKeyId
+$env:AWS_SECRET_ACCESS_KEY = $Provision.secretKey
+$env:AWS_SESSION_TOKEN = $Provision.sessionToken
+
+aws --endpoint-url $env:S3_ENDPOINT s3 mb s3://windows-install-check
+"windows install check" | Out-File C:\Temp\windows-check.txt
+aws --endpoint-url $env:S3_ENDPOINT s3 cp C:\Temp\windows-check.txt s3://windows-install-check/windows-check.txt
+aws --endpoint-url $env:S3_ENDPOINT s3 cp s3://windows-install-check/windows-check.txt -
+
+# On one storage server during client writes:
+&amp; "$InstallDir\scripts\Stop-Li9S3Services.ps1" -Services @("storage-node")
+&amp; "$InstallDir\scripts\Start-Li9S3Services.ps1" -InstallDir $InstallDir -Services @("storage-node")
+Invoke-WebRequest "${Li9Scheme}://${Li9ControlHost}:9009/v1/info" -UseBasicParsing</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

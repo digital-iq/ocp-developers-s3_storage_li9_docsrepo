@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Installation Overview - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a class="active" href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Installation</div>
+        <h1>Choose one installation path and keep the lifecycle boundary clear.</h1>
+        <p class="lede">Li9 S3 Storage can be installed through the OpenShift operator, Helm chart, Linux packages, Windows packages, or a mirrored private-registry flow. Each method owns its own lifecycle and should not be mixed with another method in the same target namespace or host cluster.</p>
+      </section>
+
+      <section class="section-band">
+        <h2>Installation Paths</h2>
+        <div class="grid">
+          <div class="panel">
+            <h3>OpenShift Operator</h3>
+            <p>Use this for production OpenShift clusters that need CRDs, cluster-scoped reconciliation, bucket automation, documentation exposure, observability, and OLM upgrades.</p>
+            <p><a class="button primary" href="install-openshift.html">Install with OLM</a></p>
+          </div>
+          <div class="panel">
+            <h3>Helm Chart</h3>
+            <p>Use this for Kubernetes environments that do not use OLM or when a GitOps workflow owns chart versions and values directly.</p>
+            <p><a class="button" href="install-helm.html">Install with Helm</a></p>
+          </div>
+          <div class="panel">
+            <h3>Linux Packages</h3>
+            <p>Use RPM or DEB packages for VM or bare-metal clusters where systemd owns runtime processes and storage paths are host-managed.</p>
+            <p><a class="button" href="install-linux.html">Install on Linux</a></p>
+          </div>
+          <div class="panel">
+            <h3>Windows Packages</h3>
+            <p>Use MSI or ZIP packages for Windows Server clusters where services, firewall rules, and persistent paths are managed outside Kubernetes.</p>
+            <p><a class="button" href="install-windows.html">Install on Windows</a></p>
+          </div>
+          <div class="panel">
+            <h3>Private Registry And Airgap</h3>
+            <p>Use this when all images, bundles, charts, and package artifacts must be mirrored into an internal registry before installation.</p>
+            <p><a class="button" href="install-airgap.html">Prepare a private registry</a></p>
+          </div>
+        </div>
+      </section>
+
+      <h2>Shared Preflight Checklist</h2>
+      <table>
+        <thead>
+          <tr><th>Check</th><th>Required Decision</th><th>Why It Matters</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Lifecycle owner</td><td>Operator, Helm, Linux package, or Windows package.</td><td>Prevents two controllers or installers from managing the same runtime.</td></tr>
+          <tr><td>Registry source</td><td>Quay, GitHub Pages chart index, internal registry, or offline package repository.</td><td>Installation must be repeatable after the first rollout.</td></tr>
+          <tr><td>Data protection</td><td>Replication for small or single-node deployments, erasure coding for production multi-node capacity efficiency.</td><td>Controls write quorum, usable capacity, and node-failure behavior.</td></tr>
+          <tr><td>Metadata placement</td><td>Co-located with data or dedicated metadata PVC/path.</td><td>Metadata availability determines whether clients can list, read, and write objects.</td></tr>
+          <tr><td>Network entry point</td><td>Route, LoadBalancer, ingress, DNS name, or VM load balancer.</td><td>AWS CLI and SDK clients need a stable S3 endpoint.</td></tr>
+          <tr><td>TLS and credentials</td><td>Certificate source, secret storage, access-key generation, and client trust chain.</td><td>Controls client security and compatibility with automation.</td></tr>
+          <tr><td>Observability</td><td>Metrics, ServiceMonitor, alert rules, dashboard visibility, audit retention.</td><td>Production operations need request rates, errors, latency, and capacity signals.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Current Release Artifact Sources</h2>
+      <table>
+        <thead>
+          <tr><th>Install Mode</th><th>Release Artifact</th><th>Current Availability</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>OpenShift Operator</td><td><code>quay.io/li9/li9-operators:li9-s3-catalog-v1.1.0-alpha.40</code><br><code>quay.io/li9/li9-operators:li9-s3-bundle-v1.1.0-alpha.40</code></td><td>Verified public Quay image tags. OLM pulls do not require product-specific image pull secrets for this release.</td></tr>
+          <tr><td>Helm Chart</td><td><a href="https://digital-iq.github.io/ocp-developers-s3_storage_li9_helmrepo/li9-s3-storage-1.1.0-alpha.15.tgz">Helm chart archive</a></td><td>Public GitHub Pages artifact. The documented SHA-256 is <code>28664fbc774e79a7c227de80acbcfba2b91c5fe457e664d92a74e4e0c78f6043</code>.</td></tr>
+          <tr><td>Linux Packages</td><td><a href="https://github.com/digital-iq/ocp-developers-s3_storage_li9_linuxrepo/releases/download/v1.1.0-alpha.14/li9-s3-storage-1.1.0.alpha.14-1.x86_64.rpm">RPM package</a><br><a href="https://github.com/digital-iq/ocp-developers-s3_storage_li9_linuxrepo/releases/download/v1.1.0-alpha.14/li9-s3-storage_1.1.0.alpha.14-1_amd64.deb">DEB package</a></td><td>Public GitHub Release assets with <code>checksums.txt</code> in the same release. Verify checksums before installing on hosts.</td></tr>
+          <tr><td>Windows Packages</td><td><a href="https://github.com/digital-iq/ocp-developers-s3_storage_li9_windowsrepo/releases/download/v1.1.0-alpha.14/li9-s3-storage-windows-1.1.0-alpha.14.msi">MSI package</a><br><a href="https://github.com/digital-iq/ocp-developers-s3_storage_li9_windowsrepo/releases/download/v1.1.0-alpha.14/li9-s3-storage-windows-1.1.0-alpha.14.zip">ZIP package</a></td><td>Public GitHub Release assets with <code>checksums.txt</code> in the same release. Verify checksums before installing on Windows hosts.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Minimum Acceptance Test</h2>
+      <p>After any installation path, run a user-level S3 test from outside the storage process boundary.</p>
+      <pre><code>aws --endpoint-url "${S3_ENDPOINT}" s3 mb s3://li9-install-check
+printf 'li9-s3-install-check\n' > /tmp/li9-s3-install-check.txt
+aws --endpoint-url "${S3_ENDPOINT}" s3 cp /tmp/li9-s3-install-check.txt s3://li9-install-check/check.txt
+aws --endpoint-url "${S3_ENDPOINT}" s3 cp s3://li9-install-check/check.txt -
+aws --endpoint-url "${S3_ENDPOINT}" s3 rm s3://li9-install-check/check.txt
+aws --endpoint-url "${S3_ENDPOINT}" s3 rb s3://li9-install-check</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

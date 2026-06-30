@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>S3 Select - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / S3 API</div>
+        <h1>S3 Select.</h1>
+        <p class="lede">S3 Select lets clients query object content without downloading the full object. Li9 S3 supports local query execution for supported CSV, JSON, and Parquet inputs with AWS-compatible <code>SelectObjectContent</code> request shape.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-s3-api.html">All S3 API reference pages</a></p>
+
+      <details class="reference-setup">
+        <summary>Common AWS CLI setup</summary>
+        <p>Run this once for a bucket issued by the active platform control surface. On OpenShift, the values come from the generated <code>S3Bucket</code> or <code>S3BucketAccess</code> Secret. On Helm, Linux, or Windows, use the credentials issued by the runtime control API or administrator tooling.</p>
+        <pre><code>export NS=li9-s3-runtime
+export BUCKET_CR=app-data
+export BUCKET="$(oc -n "$NS" get s3bucket "$BUCKET_CR" -o jsonpath='{.status.bucketName}')"
+export SECRET="$(oc -n "$NS" get s3bucket "$BUCKET_CR" -o jsonpath='{.status.secretName}')"
+export ENDPOINT="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ENDPOINT_URL}' | base64 -d)"
+export AWS_ACCESS_KEY_ID="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)"
+export AWS_SECRET_ACCESS_KEY="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)"
+export AWS_REGION="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_REGION}' 2&gt;/dev/null | base64 -d || true)"
+export AWS_REGION="${AWS_REGION:-us-east-1}"
+export AWS_EC2_METADATA_DISABLED=true
+li9s3() {
+  aws --endpoint-url "$ENDPOINT" --region "$AWS_REGION" --no-verify-ssl s3api "$@"
+}</code></pre>
+        <p>For Helm, Linux, and Windows replace the exported values with the endpoint and credentials from that platform. The commands below intentionally use standard AWS CLI syntax after the setup.</p>
+      </details>
+
+      <h2 id="supported-inputs">Supported Inputs</h2>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-s3-select-flow.png" alt="S3 Select execution flow. S3 Select runs supported SQL-style projections against object content and returns only matching records." loading="lazy">
+        <figcaption>Use S3 Select when applications need to reduce transfer size for supported object formats.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Format</th><th>Use Case</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>CSV</td><td>Delimited operational exports and reports.</td><td>Use <code>FileHeaderInfo</code> when the first row contains columns.</td></tr>
+          <tr><td>JSON Lines</td><td>Streaming records, logs, and events.</td><td>Each line is treated as a JSON document.</td></tr>
+          <tr><td>JSON Document</td><td>Structured document queries.</td><td>Use expressions appropriate to document shape.</td></tr>
+          <tr><td>Parquet</td><td>Columnar inventory or table snapshots.</td><td>Useful with inventory and metadata table outputs.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="csv-example">CSV Query Example</h2>
+      <pre><code>cat &gt; /tmp/select.csv &lt;&lt;'EOF'
+city,score
+Paris,10
+Rome,20
+Paris,30
+EOF
+li9s3 put-object --bucket "$BUCKET" --key select/scores.csv --body /tmp/select.csv --content-type text/csv
+aws --endpoint-url "$ENDPOINT" --region "$AWS_REGION" --no-verify-ssl s3api select-object-content   --bucket "$BUCKET"   --key select/scores.csv   --expression "SELECT city, SUM(CAST(score AS INT)) AS total FROM S3Object GROUP BY city ORDER BY total DESC"   --expression-type SQL   --input-serialization '{"CSV":{"FileHeaderInfo":"USE"}}'   --output-serialization '{"JSON":{}}'   /tmp/select-output.json
+cat /tmp/select-output.json</code></pre>
+
+      <h2 id="when-not-to-use">When Not To Use</h2>
+      <ul>
+        <li>Do not use S3 Select for arbitrary analytics workloads that need joins across many objects.</li>
+        <li>Do not expect AWS Glue, Athena, or Lake Formation integration; those are AWS-managed services outside product-local scope.</li>
+        <li>Use inventory or metadata tables when the goal is periodic object catalog analysis.</li>
+      </ul>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

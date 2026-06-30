@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administration - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+      <nav>
+        <a href="index.html">Overview</a>
+        <a href="/runtime/">Runtime</a>
+        <a href="install.html">Install</a>
+        <a href="cr-examples.html">CR Examples</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a class="active" href="administration.html">Overview</a>
+        <a class="sub" href="#buckets">Buckets and access</a>
+        <a class="sub" href="#lifecycle">Lifecycle policy and restore</a>
+        <a class="sub" href="#replication">Replication</a>
+        <a class="sub" href="#security">Security and encryption</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a class="sub" href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Upgrade</h3>
+        <a href="upgrade.html">Upgrade paths</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/services.html">Runtime services</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Administration</div>
+        <h1>Manage S3 tenants, buckets, policies, data lifecycle, and security controls.</h1>
+        <p class="lede">Administration documents describe how platform teams expose Li9 S3 to application teams while keeping ownership boundaries clear. The operator owns Kubernetes resources; the runtime owns S3 protocol behavior and data protection.</p>
+      </section>
+
+      <section id="buckets">
+        <h2>Buckets and access</h2>
+        <p>Use <code>S3Bucket</code> to declare a bucket and <code>S3BucketAccess</code> to issue scoped credentials. The access resource defines the exact actions and prefixes available to the application owner.</p>
+        <div class="grid two">
+          <div class="panel">
+            <h3>Recommended pattern</h3>
+            <p>Create one bucket per workload boundary, then create separate access resources for writers, readers, and automation jobs.</p>
+          </div>
+          <div class="panel">
+            <h3>Avoid</h3>
+            <p>Do not reuse one broad credential across unrelated teams. That makes incident response and policy review harder.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="lifecycle">
+        <h2>Lifecycle policy and restore</h2>
+        <p>Lifecycle policy belongs either on the bucket or in a reusable archive policy object when multiple buckets share the same retention and archive behavior.</p>
+        <table>
+          <thead>
+            <tr><th>Feature</th><th>Administrative purpose</th><th>Operator surface</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Expiration</td><td>Remove old object versions or stale temporary data.</td><td><code>S3BucketLifecycle</code> or bucket lifecycle settings.</td></tr>
+            <tr><td>Archive</td><td>Move colder data to an archive tier while keeping restore semantics visible.</td><td><code>S3ArchivePolicy</code> or bucket archive settings.</td></tr>
+            <tr><td>Restore</td><td>Bring archived data back to the active tier for reads.</td><td>Runtime API and status-backed background work.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="replication">
+        <h2>Replication</h2>
+        <p>Replication is a bucket-level feature for copying objects to another bucket or storage target. It is not the same as data-plane replication used for durability inside one Li9 S3 deployment.</p>
+        <div class="callout">
+          <strong>Rule:</strong> use data protection settings for local durability; use bucket replication for copy workflows, migration, DR patterns, and cross-target synchronization.
+        </div>
+      </section>
+
+      <section id="security">
+        <h2>Security and encryption</h2>
+        <p>Security administration covers S3 access credentials, AWS-style bucket policy, TLS, KMS-style server-side encryption, object lock, and audit records.</p>
+        <table>
+          <thead>
+            <tr><th>Control</th><th>Purpose</th><th>Operational signal</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Bucket policy</td><td>Allow or deny S3 actions by subject, resource, prefix, and conditions.</td><td>Gateway authorization decision metrics.</td></tr>
+            <tr><td>TLS</td><td>Protect client traffic and service-to-service traffic.</td><td>Certificate expiry and handshake error metrics.</td></tr>
+            <tr><td>KMS-style SSE</td><td>Encrypt data with platform-controlled key material.</td><td>KMS operation errors and audit outbox lag.</td></tr>
+            <tr><td>Audit</td><td>Record S3 and KMS-relevant actions for investigation.</td><td>Audit event rate and persist failures.</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

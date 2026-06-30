@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Windows Packages Prerequisites - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub active" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Windows Packages</div>
+        <h1>Windows Packages: Prerequisites.</h1>
+        <p class="lede">Prepare access, artifacts, storage, network, security, and disconnected sources before installing.</p>
+      </section>
+
+      <h2>Prerequisites</h2>
+      <h3>Online Prerequisites</h3>
+      <table>
+        <thead><tr><th>Check</th><th>Command Or Decision</th><th>Expected Result</th></tr></thead>
+        <tbody>
+          <tr><td>Servers</td><td>Prepare 3 Windows Server nodes for production or 1 node for explicit single-node mode.</td><td>All servers have stable DNS or IP addresses.</td></tr>
+          <tr><td>Artifact access</td><td>Download the public MSI or ZIP release artifacts and checksums.</td><td>Files match the published SHA256 checksums for the intended version.</td></tr>
+          <tr><td>Service account</td><td>Run PowerShell as an administrator or use an automation account with local admin rights.</td><td>Account can create directories, write runtime state, and start Li9 S3 processes.</td></tr>
+          <tr><td>Storage paths</td><td>Persistent directories or attached disks exist under <code>C:\ProgramData\Li9\S3Storage</code> or the selected ZIP install path.</td><td>Paths survive reboot and have enough capacity for data, metadata, WAL, and logs.</td></tr>
+          <tr><td>Firewall</td><td>Open S3, admin, health, and internal service ports.</td><td>Clients and peer nodes can connect to ports 9000 through 9010 as required by the selected node role.</td></tr>
+          <tr><td>Endpoint security</td><td>Terminate external TLS at the load balancer or reverse proxy when exposing the gateway outside the trusted network.</td><td>External clients use HTTPS while node-to-node test deployments can use the package default HTTP endpoints.</td></tr>
+        </tbody>
+      </table>
+      <pre><code>$PSVersionTable.PSVersion
+Get-ComputerInfo | Select-Object OsName, OsVersion
+Test-NetConnection 10.20.10.11 -Port 9000
+Test-NetConnection 10.20.10.11 -Port 9001
+Test-NetConnection 10.20.10.11 -Port 9008
+Get-NetFirewallRule | Where-Object DisplayName -like "Li9 S3*"</code></pre>
+
+      <h3>Air-Gapped Prerequisites</h3>
+      <p>Copy MSI, ZIP, and checksum artifacts from the public Windows package release into an internal package share or enterprise software distribution system. Verify checksums before installing.</p>
+      <pre><code>$Li9NativeVersion = "1.1.0-alpha.14"
+$Share = "\\fileserver\li9-s3\windows\v1.1.0-alpha.14"
+$Msi = Join-Path $Share "li9-s3-storage-windows-$Li9NativeVersion.msi"
+$Zip = Join-Path $Share "li9-s3-storage-windows-$Li9NativeVersion.zip"
+$Checksums = Join-Path $Share "checksums.txt"
+Get-ChildItem $Share
+Get-FileHash $Msi -Algorithm SHA256
+Get-FileHash $Zip -Algorithm SHA256
+Get-Content $Checksums
+Copy-Item $Msi C:\Temp\
+Copy-Item $Zip C:\Temp\</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

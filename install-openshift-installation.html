@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenShift Operator Installation - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub active" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">OpenShift Operator</div>
+        <h1>OpenShift Operator: Installation.</h1>
+        <p class="lede">Run the production installation procedure with copy-paste commands and field references.</p>
+      </section>
+
+      <h2>Installation</h2>
+      <div class="procedure">
+        <div class="procedure-item"><div><h3>1. Create the operator namespace</h3><p>This namespace hosts OLM resources and the controller deployment. Runtime resources can be created in tenant namespaces.</p></div></div>
+        <div class="procedure-item"><div><h3>2. Register the catalog</h3><p>Create a CatalogSource from the online or mirrored catalog image.</p></div></div>
+        <div class="procedure-item"><div><h3>3. Subscribe to the operator</h3><p>Install Li9 S3 Storage from OpenShift Software Catalog or create the equivalent OperatorGroup and Subscription.</p></div></div>
+        <div class="procedure-item"><div><h3>4. Wait for operator readiness</h3><p>Verify the package manifest, CSV, CRDs, and controller deployment before creating runtime CRs.</p></div></div>
+        <div class="procedure-item"><div><h3>5. Create S3Storage</h3><p>Choose data protection, metadata placement, PVC sizes, gateway exposure, and observability.</p></div></div>
+        <div class="procedure-item"><div><h3>6. Create bucket, access, and optional docs</h3><p>Create S3Bucket and S3BucketAccess resources for applications, and create S3Documentation when operators need in-cluster documentation.</p></div></div>
+        <div class="procedure-item"><div><h3>7. Verify with AWS CLI</h3><p>Validate from a separate client pod so the test matches a real application flow.</p></div></div>
+      </div>
+
+      <h3>1. Create Namespace</h3>
+      <pre><code>oc new-project li9-operators || oc project li9-operators
+oc label namespace li9-operators app.kubernetes.io/part-of=li9-operators --overwrite</code></pre>
+
+      <h3>2. Create CatalogSource</h3>
+      <p>Use the public release catalog image for OLM discovery. The bundle image is listed and checked explicitly because the catalog resolves this bundle when the Subscription installs the operator. For the public online release, do not set <code>spec.secrets</code> on the CatalogSource and do not create a Li9 registry pull secret in the customer cluster.</p>
+      <pre><code>export LI9_OPERATOR_VERSION=1.1.0-alpha.40
+export LI9_IMAGE_REPO=quay.io/li9/li9-operators
+export LI9_BUNDLE_IMAGE="${LI9_IMAGE_REPO}:li9-s3-bundle-v${LI9_OPERATOR_VERSION}"
+export LI9_CATALOG_IMAGE="${LI9_IMAGE_REPO}:li9-s3-catalog-v${LI9_OPERATOR_VERSION}"
+
+oc image info "${LI9_BUNDLE_IMAGE}" --filter-by-os=linux/amd64
+oc image info "${LI9_CATALOG_IMAGE}" --filter-by-os=linux/amd64
+
+cat &lt;&lt;'EOF' | envsubst | oc apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: li9-operators
+  namespace: openshift-marketplace
+spec:
+  sourceType: grpc
+  image: ${LI9_CATALOG_IMAGE}
+  displayName: Li9 Operators
+  publisher: Li9
+  updateStrategy:
+    registryPoll:
+      interval: 30m
+EOF
+oc wait pod -n openshift-marketplace -l olm.catalogSource=li9-operators --for=condition=Ready --timeout=5m</code></pre>
+
+      <h3>CatalogSource Properties</h3>
+      <table>
+        <thead><tr><th>Property</th><th>Description</th><th>Allowed Or Recommended Values</th></tr></thead>
+        <tbody>
+          <tr><td><code>metadata.name</code></td><td>CatalogSource name referenced by Li9 operator Subscriptions.</td><td><code>li9-operators</code>. Keep this S3-neutral because the same catalog will publish multiple Li9 operators.</td></tr>
+          <tr><td><code>metadata.namespace</code></td><td>Namespace where OLM reads catalog sources.</td><td><code>openshift-marketplace</code> for cluster-visible catalogs.</td></tr>
+          <tr><td><code>spec.sourceType</code></td><td>Catalog protocol.</td><td><code>grpc</code>.</td></tr>
+          <tr><td><code>spec.image</code></td><td>Index image containing Li9 operator packages, including Li9 S3 Storage.</td><td><code>quay.io/li9/li9-operators:li9-s3-catalog-v1.1.0-alpha.40</code> for the current public release, or a mirrored internal registry image for disconnected clusters.</td></tr>
+          <tr><td><code>spec.secrets</code></td><td>Optional pull secret list for private catalog images.</td><td>Omit for the public Li9 Quay catalog. Use only when installing from a private internal registry that requires authentication.</td></tr>
+          <tr><td><code>LI9_BUNDLE_IMAGE</code></td><td>Bundle image resolved by the catalog for this release.</td><td><code>quay.io/li9/li9-operators:li9-s3-bundle-v1.1.0-alpha.40</code>. Verify pull access before creating the Subscription.</td></tr>
+          <tr><td><code>spec.displayName</code></td><td>Name displayed in OperatorHub.</td><td><code>Li9 Operators</code>.</td></tr>
+          <tr><td><code>spec.publisher</code></td><td>Vendor displayed in OperatorHub.</td><td><code>Li9</code>.</td></tr>
+          <tr><td><code>spec.updateStrategy.registryPoll.interval</code></td><td>How often OLM checks for catalog updates.</td><td>Example: <code>30m</code>. Increase in tightly controlled production clusters.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3. Subscribe To The Operator</h3>
+      <p>Use the OpenShift Console path when an administrator wants to install the operator interactively from the catalog. Use the CLI path when the installation is driven by GitOps, automation, or a reviewed change record. Both paths create the same OLM Subscription and result in the same installed CSV.</p>
+
+      <h4>Console Installation</h4>
+      <ol>
+        <li>Open the OpenShift Console in the Administrator perspective.</li>
+        <li>Go to <strong>Operators</strong>, then open <strong>OperatorHub</strong> or <strong>Software Catalog</strong>, depending on the console version.</li>
+        <li>Search for <strong>Li9 S3 Storage Operator</strong>. If it is not listed, verify the <code>li9-operators</code> CatalogSource from step 2 is Ready in <code>openshift-marketplace</code>.</li>
+        <li>Open the operator tile and click <strong>Install</strong>.</li>
+        <li>Select the <strong>alpha</strong> update channel for the current published release.</li>
+        <li>Select <strong>li9-operators</strong> as the installed namespace. If the namespace is not offered, create it first with step 1.</li>
+        <li>Select the approval strategy. Use <strong>Automatic</strong> for hands-off upgrades, or <strong>Manual</strong> when production changes require InstallPlan review.</li>
+        <li>Click <strong>Install</strong> and wait until the operator appears under <strong>Installed Operators</strong> with status <strong>Succeeded</strong>.</li>
+      </ol>
+      <table>
+        <thead><tr><th>Console Field</th><th>Value To Select</th><th>Why It Matters</th></tr></thead>
+        <tbody>
+          <tr><td>Catalog</td><td><code>Li9 Operators</code> from <code>openshift-marketplace</code>.</td><td>This is the catalog registered in step 2 and it contains the Li9 S3 package.</td></tr>
+          <tr><td>Operator</td><td><code>Li9 S3 Storage Operator</code>.</td><td>This installs the controller that reconciles <code>S3Storage</code>, bucket, access, lifecycle, replication, policy, and documentation CRs.</td></tr>
+          <tr><td>Update channel</td><td><code>alpha</code> for the current published release line.</td><td>The channel controls which CSV version OLM installs and upgrades to.</td></tr>
+          <tr><td>Installed namespace</td><td><code>li9-operators</code>.</td><td>The operator deployment and Subscription live in the shared Li9 operator namespace.</td></tr>
+          <tr><td>Installation mode</td><td>Cluster-scoped installation.</td><td>The operator must reconcile Li9 S3 CRs across namespaces.</td></tr>
+          <tr><td>Approval strategy</td><td><code>Automatic</code> for hands-off rollout or <code>Manual</code> for reviewed production changes.</td><td>Manual approval lets administrators inspect InstallPlans before OLM applies upgrades.</td></tr>
+          <tr><td>Version</td><td>Select the newest CSV shown for the chosen channel unless a change record pins another version.</td><td>The installed CSV version should match the release approved for the environment.</td></tr>
+        </tbody>
+      </table>
+      <p>After clicking <strong>Install</strong>, keep the Console open until the status changes from installing to <strong>Succeeded</strong>. Then open <strong>Installed Operators</strong>, select <strong>Li9 S3 Storage Operator</strong>, and confirm that the provided APIs include the Li9 S3 CRDs before creating runtime resources.</p>
+
+      <h4>CLI Installation</h4>
+      <pre><code>cat &lt;&lt;'EOF' | oc apply -f -
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: li9-operators
+  namespace: li9-operators
+spec: {}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: li9-s3-operator
+  namespace: li9-operators
+spec:
+  channel: alpha
+  installPlanApproval: Automatic
+  name: li9-s3-operator
+  source: li9-operators
+  sourceNamespace: openshift-marketplace
+EOF
+oc get subscription -n li9-operators li9-s3-operator
+oc get installplan -n li9-operators</code></pre>
+
+      <h3>OperatorGroup Properties</h3>
+      <table>
+        <thead><tr><th>Property</th><th>Description</th><th>Allowed Or Recommended Values</th></tr></thead>
+        <tbody>
+          <tr><td><code>metadata.name</code></td><td>OperatorGroup object name.</td><td><code>li9-operators</code>. Keep it S3-neutral so the namespace can host multiple Li9 operators.</td></tr>
+          <tr><td><code>metadata.namespace</code></td><td>Operator installation namespace.</td><td><code>li9-operators</code> or another shared Li9 operator namespace.</td></tr>
+          <tr><td><code>spec</code></td><td>Target namespace selection.</td><td>Empty object for cluster-scoped behavior. Avoid narrowing unless the operator is intentionally namespace-scoped.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Subscription Properties</h3>
+      <table>
+        <thead><tr><th>Property</th><th>Description</th><th>Allowed Or Recommended Values</th></tr></thead>
+        <tbody>
+          <tr><td><code>metadata.name</code></td><td>Subscription resource name.</td><td><code>li9-s3-operator</code>.</td></tr>
+          <tr><td><code>metadata.namespace</code></td><td>Operator namespace.</td><td><code>li9-operators</code>, the shared namespace that contains the OperatorGroup.</td></tr>
+          <tr><td><code>spec.channel</code></td><td>Release channel consumed from the catalog.</td><td><code>alpha</code> for the current published channel. Production deployments must pin the intended channel and review InstallPlans before approval.</td></tr>
+          <tr><td><code>spec.installPlanApproval</code></td><td>InstallPlan approval mode.</td><td><code>Automatic</code> for hands-off upgrades, <code>Manual</code> for controlled production approval.</td></tr>
+          <tr><td><code>spec.name</code></td><td>Package name in the catalog.</td><td><code>li9-s3-operator</code>.</td></tr>
+          <tr><td><code>spec.source</code></td><td>CatalogSource name.</td><td><code>li9-operators</code>.</td></tr>
+          <tr><td><code>spec.sourceNamespace</code></td><td>CatalogSource namespace.</td><td><code>openshift-marketplace</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4. Wait For Operator Readiness</h3>
+      <pre><code>oc get packagemanifest li9-s3-operator -n openshift-marketplace
+oc get csv -n li9-operators
+oc wait csv -n li9-operators -l operators.coreos.com/li9-s3-operator.li9-operators="" --for=jsonpath='{.status.phase}'=Succeeded --timeout=10m
+oc get crd | grep storage.li9.com
+oc get deploy -n li9-operators</code></pre>
+      <figure class="docs-screenshot">
+        <img src="assets/screenshots/openshift-installed-operator.png" alt="OpenShift Console Installed Operator details for Li9 S3 Storage Operator showing version and provided APIs." loading="lazy">
+        <figcaption>OpenShift Console after OLM installs the operator. Use this UI to confirm the installed version and the CRDs exposed by the operator.</figcaption>
+      </figure>
+
+      <h3>5. Create S3Storage</h3>
+      <pre><code>oc new-project li9-s3-runtime || oc project li9-s3-runtime
+cat &lt;&lt;'EOF' | oc apply -f -
+apiVersion: storage.li9.com/v1alpha1
+kind: S3Storage
+metadata:
+  name: li9-s3
+  namespace: li9-s3-runtime
+spec:
+  deletionPolicy: Retain
+  region:
+    default: li9-mgm01
+    allowed:
+      - li9-mgm01
+      - us-east-1
+  exposure:
+    route:
+      enabled: false
+  console:
+    enabled: true
+    rbacNamespace: li9-s3-runtime
+    route:
+      enabled: true
+  storage:
+    data:
+      protection:
+        type: Replication
+        replication:
+          replicas: 3
+      placement:
+        layout: PerNodePVC
+        nodes: 3
+        failureDomain:
+          type: Node
+      pvc:
+        size: 20Gi
+        storageClassName: ocs-storagecluster-ceph-rbd
+    metadata:
+      placement:
+        type: ColocatedWithData
+      pvc:
+        size: 5Gi
+        storageClassName: ocs-storagecluster-ceph-rbd
+  observability:
+    metrics:
+      serviceMonitor:
+        enabled: true
+      prometheusRule:
+        enabled: true
+EOF
+oc wait s3storage -n li9-s3-runtime li9-s3 --for=condition=Ready --timeout=20m
+oc get pods,pvc,svc -n li9-s3-runtime -l app.kubernetes.io/part-of=li9-s3</code></pre>
+
+      <h3>S3Storage Properties</h3>
+      <table>
+        <thead><tr><th>Property</th><th>Description</th><th>Allowed Or Recommended Values</th></tr></thead>
+        <tbody>
+          <tr><td><code>spec.deletionPolicy</code></td><td>Controls data handling when the CR is removed.</td><td><code>Retain</code> keeps PVC data; <code>Delete</code> performs destructive cleanup and removes runtime data.</td></tr>
+          <tr><td><code>spec.region.default</code></td><td>Default S3 region for buckets that do not set <code>spec.region</code>.</td><td>Use a valid SigV4 token such as <code>li9-mgm01</code>. If omitted, the operator uses <code>us-east-1</code> for AWS CLI parity.</td></tr>
+          <tr><td><code>spec.region.allowed</code></td><td>Explicit region allow-list for this storage instance.</td><td>Must include <code>spec.region.default</code> when set. If omitted or empty, only the default region is allowed.</td></tr>
+          <tr><td><code>spec.exposure.route.enabled</code></td><td>Creates an OpenShift Route for the S3 endpoint.</td><td><code>false</code> by default; <code>true</code> only when external client access through Route is approved.</td></tr>
+          <tr><td><code>spec.exposure.route.host</code></td><td>Optional fixed external S3 DNS name.</td><td>Set when DNS is pre-reserved. If omitted and Route is enabled, the operator uses the OpenShift-admitted Route host once available.</td></tr>
+          <tr><td><code>status.endpoint</code></td><td>Effective endpoint written to bucket/access Secrets.</td><td>External Route endpoint when Route host is explicit or admitted; otherwise the internal <code>s3-gateway</code> Service endpoint in the service namespace.</td></tr>
+          <tr><td><code>spec.console.enabled</code></td><td>Deploys the OpenShift OAuth-protected bucket browser.</td><td><code>false</code> by default. Set <code>true</code> when human users should browse buckets through OpenShift identity.</td></tr>
+          <tr><td><code>spec.console.route.enabled</code></td><td>Creates an OpenShift Route for the bucket browser.</td><td>Usually <code>true</code> with console enabled. The browser route is separate from the S3 gateway route.</td></tr>
+          <tr><td><code>spec.console.rbacNamespace</code></td><td>Namespace where the browser checks <code>s3buckets/objects</code> RBAC.</td><td>Defaults to the runtime namespace. Use a tenant namespace when bucket-object permissions are managed there.</td></tr>
+          <tr><td><code>spec.storage.data.protection.type</code></td><td>Data protection engine.</td><td><code>Replication</code> for one or more replicas; <code>ErasureCoding</code> for shard-based durability; <code>External</code> for an externally durable backend.</td></tr>
+          <tr><td><code>spec.storage.data.protection.replication.replicas</code></td><td>Replica count when protection type is replication.</td><td><code>1</code> for explicit single-node or edge installs, <code>3</code> or more for production.</td></tr>
+          <tr><td><code>spec.storage.data.protection.erasureCoding.dataShards</code></td><td>Number of required data shards in erasure coding.</td><td>Integer greater than zero. Example: <code>2</code>.</td></tr>
+          <tr><td><code>spec.storage.data.protection.erasureCoding.parityShards</code></td><td>Number of parity shards that can be lost without data loss.</td><td>Integer greater than zero. Example: <code>2</code>.</td></tr>
+          <tr><td><code>spec.storage.data.placement.layout</code></td><td>PVC topology for data.</td><td><code>PerNodePVC</code> for RWO node-local PVCs; <code>SharedPVC</code> for RWX shared PVCs; <code>TieredPVC</code> for separated active/archive placement.</td></tr>
+          <tr><td><code>spec.storage.data.placement.nodes</code></td><td>Number of storage nodes to schedule.</td><td>Must match durability design. Example: <code>1</code>, <code>3</code>, <code>4</code>, or more.</td></tr>
+          <tr><td><code>spec.storage.data.placement.failureDomain.type</code></td><td>Failure-domain strategy.</td><td><code>Node</code>, <code>TopologyLabel</code>, or <code>Storage</code>. External backends default to <code>Storage</code>.</td></tr>
+          <tr><td><code>spec.storage.data.pvc.size</code></td><td>Requested PVC size for data.</td><td>Kubernetes quantity such as <code>20Gi</code>, <code>1Ti</code>.</td></tr>
+          <tr><td><code>spec.storage.data.pvc.storageClassName</code></td><td>Storage class for data PVCs.</td><td>Any cluster StorageClass compatible with the chosen layout.</td></tr>
+          <tr><td><code>spec.storage.metadata.placement.type</code></td><td>Metadata placement.</td><td><code>ColocatedWithData</code> places metadata with data; <code>DedicatedPVC</code> uses separate metadata PVCs.</td></tr>
+          <tr><td><code>spec.storage.metadata.pvc.size</code></td><td>Metadata PVC size when metadata has a PVC.</td><td>Kubernetes quantity. Size for KV/WAL metadata growth and compaction.</td></tr>
+          <tr><td><code>spec.storage.metadata.pvc.storageClassName</code></td><td>Storage class for metadata PVCs.</td><td>Low-latency class preferred. Can match data class if co-located.</td></tr>
+          <tr><td><code>spec.observability.metrics.serviceMonitor.enabled</code></td><td>Creates ServiceMonitor resources.</td><td><code>true</code> when user workload Prometheus is enabled; otherwise <code>false</code>.</td></tr>
+          <tr><td><code>spec.observability.metrics.prometheusRule.enabled</code></td><td>Creates PrometheusRule resources.</td><td><code>true</code> for production alerting; <code>false</code> for minimal installs.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>6. Create Bucket, Access, And Optional Docs</h3>
+      <pre><code>cat &lt;&lt;'EOF' | oc apply -f -
+apiVersion: storage.li9.com/v1alpha1
+kind: S3Bucket
+metadata:
+  name: app-logs
+  namespace: li9-s3-runtime
+spec:
+  storageRef:
+    name: li9-s3
+---
+apiVersion: storage.li9.com/v1alpha1
+kind: S3BucketAccess
+metadata:
+  name: app-logs-writer
+  namespace: li9-s3-runtime
+spec:
+  s3BucketRef: app-logs
+  access:
+    effect: Allow
+    actions:
+      - s3:ListBucket
+      - s3:GetObject
+      - s3:PutObject
+      - s3:DeleteObject
+    prefixes:
+      - ""
+---
+apiVersion: storage.li9.com/v1alpha1
+kind: S3Documentation
+metadata:
+  name: li9-s3-docs
+  namespace: li9-s3-runtime
+spec:
+  exposure:
+    route:
+      enabled: true
+      tls: true
+EOF
+oc get s3bucket,s3bucketaccess,s3documentation -n li9-s3-runtime</code></pre>
+
+      <h3>OpenShift Console And Bucket Browser UI</h3>
+      <p>When <code>spec.console.enabled</code> is true, the operator creates an OAuth-protected bucket browser. Grant users access with OpenShift RBAC on the <code>s3buckets/objects</code> subresource before asking them to open the Route.</p>
+      <pre><code>cat &lt;&lt;'EOF' | oc -n li9-s3-runtime apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: app-logs-browser-reader
+rules:
+  - apiGroups: ["storage.li9.com"]
+    resources: ["s3buckets/objects"]
+    resourceNames: ["app-logs"]
+    verbs: ["list", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: app-logs-browser-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: app-logs-browser-reader
+subjects:
+  - kind: User
+    apiGroup: rbac.authorization.k8s.io
+    name: alice@example.com
+EOF
+oc -n li9-s3-runtime get route s3-console
+oc -n li9-s3-runtime auth can-i list s3buckets.storage.li9.com/app-logs --subresource=objects --as=alice@example.com</code></pre>
+
+      <figure class="docs-screenshot">
+        <img src="assets/screenshots/s3-console-bucket-browser.png" alt="Li9 S3 bucket browser root view after OpenShift RBAC grants access to a bucket." loading="lazy">
+        <figcaption>Bucket browser root view after OpenShift OAuth authentication and RBAC approval. The screenshot is sanitized and does not include a cluster URL.</figcaption>
+      </figure>
+
+      <h3>S3Bucket Properties</h3>
+      <table>
+        <thead><tr><th>Property</th><th>Description</th><th>Allowed Or Recommended Values</th></tr></thead>
+        <tbody>
+          <tr><td><code>metadata.name</code></td><td>Kubernetes object name and default bucket name.</td><td>DNS-compatible bucket name such as <code>app-logs</code>.</td></tr>
+          <tr><td><code>metadata.namespace</code></td><td>Tenant namespace that owns the bucket request.</td><td>Any namespace watched by the cluster-scoped operator.</td></tr>
+          <tr><td><code>spec.storageRef.name</code></td><td>Target S3Storage instance.</td><td>Name of an existing <code>S3Storage</code> resource.</td></tr>
+          <tr><td><code>spec.storageRef.namespace</code></td><td>Optional storage namespace when bucket lives elsewhere.</td><td>Omit when bucket and storage are in the same namespace; set for cross-namespace consumption when allowed by policy.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>S3BucketAccess Properties</h3>
+      <table>
+        <thead><tr><th>Property</th><th>Description</th><th>Allowed Or Recommended Values</th></tr></thead>
+        <tbody>
+          <tr><td><code>metadata.name</code></td><td>Access request name and generated Secret name.</td><td>Stable application-oriented name, for example <code>app-logs-writer</code>.</td></tr>
+          <tr><td><code>spec.s3BucketRef</code></td><td>Same-namespace <code>S3Bucket</code> resource to issue access for.</td><td>Name of an existing <code>S3Bucket</code>. Use <code>spec.bucketName</code> with <code>spec.storageRef</code> only for direct bucket-name access.</td></tr>
+          <tr><td><code>spec.secretName</code></td><td>Optional generated Secret name.</td><td>Omit to use the access CR name.</td></tr>
+          <tr><td><code>spec.access.effect</code></td><td>Managed policy statement effect for this credential.</td><td><code>Allow</code> or <code>Deny</code>. Default is <code>Allow</code>.</td></tr>
+          <tr><td><code>spec.access.actions</code></td><td>Allowed S3 actions for generated credentials.</td><td>Common values: <code>s3:ListBucket</code>, <code>s3:GetObject</code>, <code>s3:PutObject</code>, <code>s3:DeleteObject</code>. Use least privilege.</td></tr>
+          <tr><td><code>spec.access.resources</code></td><td>Optional explicit AWS-style S3 ARN resources.</td><td>Omit when resources can be derived from bucket and prefixes.</td></tr>
+          <tr><td><code>spec.access.prefixes</code></td><td>Object key prefixes used to derive object ARNs.</td><td>Use <code>""</code> for the whole bucket or a prefix such as <code>logs/</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>S3Documentation Properties</h3>
+      <table>
+        <thead><tr><th>Property</th><th>Description</th><th>Allowed Or Recommended Values</th></tr></thead>
+        <tbody>
+          <tr><td><code>metadata.name</code></td><td>Documentation site CR name.</td><td>Example: <code>li9-s3-docs</code>.</td></tr>
+          <tr><td><code>spec.exposure.route.enabled</code></td><td>Creates an OpenShift Route for the docs site.</td><td><code>true</code> to expose through Route; <code>false</code> for in-cluster Service only.</td></tr>
+          <tr><td><code>spec.exposure.route.tls</code></td><td>Enables Route TLS behavior.</td><td><code>true</code> for HTTPS routes; <code>false</code> only when TLS is terminated by an approved upstream component.</td></tr>
+          <tr><td><code>spec.exposure.route.host</code></td><td>Optional fixed Route host.</td><td>Empty or omitted for OpenShift-generated host; set only when DNS is reserved.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>7. Verify With AWS CLI</h3>
+      <pre><code>export LI9_NS=li9-s3-runtime
+export AWS_ACCESS_KEY_ID="$(oc get secret -n "${LI9_NS}" app-logs-writer -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)"
+export AWS_SECRET_ACCESS_KEY="$(oc get secret -n "${LI9_NS}" app-logs-writer -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)"
+export AWS_SESSION_TOKEN="$(oc get secret -n "${LI9_NS}" app-logs-writer -o jsonpath='{.data.AWS_SESSION_TOKEN}' 2&gt;/dev/null | base64 -d || true)"
+export AWS_DEFAULT_REGION="$(oc get secret -n "${LI9_NS}" app-logs-writer -o jsonpath='{.data.AWS_DEFAULT_REGION}' | base64 -d)"
+export S3_ENDPOINT="$(oc get secret -n "${LI9_NS}" app-logs-writer -o jsonpath='{.data.AWS_ENDPOINT_URL}' | base64 -d)"
+oc run -n "${LI9_NS}" aws-cli --rm -it --restart=Never --image=public.ecr.aws/aws-cli/aws-cli:latest --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_SESSION_TOKEN --env AWS_DEFAULT_REGION --env S3_ENDPOINT --command -- sh -c '
+aws --endpoint-url "${S3_ENDPOINT}" s3 ls
+printf "operator install check\n" &gt; /tmp/check.txt
+aws --endpoint-url "${S3_ENDPOINT}" s3 cp /tmp/check.txt s3://app-logs/install-check.txt
+aws --endpoint-url "${S3_ENDPOINT}" s3 cp s3://app-logs/install-check.txt -
+'</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

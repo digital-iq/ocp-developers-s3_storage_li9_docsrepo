@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Runtime Usage - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Storage Runtime</div>
+      <nav>
+        <a href="/">Docs Home</a>
+        <a href="index.html">Overview</a>
+        <a href="usage.html">Usage</a>
+        <a href="services.html">Services</a>
+        <a href="architecture.html">Architecture</a>
+      </nav>
+    </div>
+  </header>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="/">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="/install.html">Overview</a>
+        <a href="/install-openshift.html">OpenShift Operator</a>
+        <a href="/install-helm.html">Helm Chart</a>
+        <a href="/install-linux.html">Linux Packages</a>
+        <a href="/install-windows.html">Windows Packages</a>
+        <a href="/install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="/administration.html">Overview</a>
+        <a class="sub" href="/administration.html#buckets">Buckets and access</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="/operations.html">Core operations</a>
+        <a class="sub" href="/troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="/reference.html">Reference index</a>
+        <a class="sub" href="/cr-examples.html">CR examples</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Runtime</h3>
+        <a href="index.html">Overview</a>
+        <a href="usage.html">Usage</a>
+        <a href="services.html">Services</a>
+        <a href="architecture.html">Architecture</a>
+      </div>
+    </aside>
+    <article class="docs-content">
+    <div class="intro">
+      <div class="eyebrow">Application integration</div>
+      <h1>Use Li9 S3 like a normal S3 endpoint.</h1>
+      <p class="lede">Applications do not need a Li9-specific SDK. They need an endpoint URL, region, bucket name, access key, secret key, and optionally a session token. The recommended OpenShift path is to consume these values from the Secret created for bucket access.</p>
+    </div>
+
+    <section class="section-band">
+      <h2>Consumption Workflow</h2>
+      <div class="grid four">
+        <div class="panel tight">
+          <div class="metric-value">1</div>
+          <h3>Request bucket</h3>
+          <p>Create the bucket through the operator, OBC/COSI, Helm-managed automation, or platform provisioning workflow.</p>
+        </div>
+        <div class="panel tight">
+          <div class="metric-value">2</div>
+          <h3>Receive Secret</h3>
+          <p>The platform delivers endpoint, bucket, region, access key, secret key, and optional session token.</p>
+        </div>
+        <div class="panel tight">
+          <div class="metric-value">3</div>
+          <h3>Configure client</h3>
+          <p>Use standard AWS CLI or SDK configuration with <code>--endpoint-url</code> or the SDK endpoint override.</p>
+        </div>
+        <div class="panel tight">
+          <div class="metric-value">4</div>
+          <h3>Validate behavior</h3>
+          <p>Run head, put, get, list, tag, multipart, and policy-specific tests before moving production traffic.</p>
+        </div>
+      </div>
+    </section>
+
+    <h2>AWS CLI Smoke Test</h2>
+    <p>Run this from a workstation or from a temporary pod that has network access to the S3 endpoint.</p>
+    <pre><code>export AWS_ACCESS_KEY_ID=&lt;from-secret&gt;
+export AWS_SECRET_ACCESS_KEY=&lt;from-secret&gt;
+export AWS_SESSION_TOKEN=&lt;optional-from-secret&gt;
+export AWS_DEFAULT_REGION=&lt;region-from-generated-secret&gt;
+export AWS_EC2_METADATA_DISABLED=true
+
+aws --endpoint-url https://&lt;s3-route-or-service&gt; s3api head-bucket --bucket app-data
+aws --endpoint-url https://&lt;s3-route-or-service&gt; s3 cp ./payload.txt s3://app-data/payload.txt
+aws --endpoint-url https://&lt;s3-route-or-service&gt; s3 cp s3://app-data/payload.txt ./downloaded.txt
+aws --endpoint-url https://&lt;s3-route-or-service&gt; s3api put-object-tagging \
+  --bucket app-data \
+  --key payload.txt \
+  --tagging 'TagSet=[{Key=env,Value=prod}]'</code></pre>
+
+    <div class="callout">
+      <strong>Expected result:</strong> <code>head-bucket</code> returns success, uploaded bytes round-trip without checksum mismatch, object tags are visible through S3 APIs, and unauthorized credentials receive access-denied responses instead of storage errors.
+    </div>
+
+    <h2>Credential Delivery</h2>
+    <p>The recommended OpenShift flow is to create a bucket and access resource through the platform interface. The operator writes a Kubernetes Secret that contains the endpoint, bucket, region, access key, secret key, and optional session token.</p>
+    <pre><code>envFrom:
+  - secretRef:
+      name: my-bucket-access</code></pre>
+
+    <h2>Configuration Values</h2>
+    <table>
+      <thead>
+        <tr><th>Value</th><th>Where it comes from</th><th>How the client uses it</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Endpoint URL</td><td>Route, service DNS name, load balancer, or native install endpoint.</td><td>Passed as <code>--endpoint-url</code> or SDK endpoint override.</td></tr>
+        <tr><td>Region</td><td>Platform default or bucket access Secret.</td><td>Used for SigV4 request signing.</td></tr>
+        <tr><td>Bucket</td><td>Bucket CR, OBC/COSI claim, Helm values, or platform request.</td><td>Used as the S3 bucket name in API calls.</td></tr>
+        <tr><td>Access key and secret key</td><td>Generated by the identity plane and stored in a Secret.</td><td>Used by AWS CLI and SDK credentials provider chains.</td></tr>
+        <tr><td>Session token</td><td>Optional, depending on access configuration.</td><td>Used when temporary credentials are issued.</td></tr>
+      </tbody>
+    </table>
+
+    <section>
+      <h2>Fit Guidance</h2>
+      <div class="decision-grid">
+        <div class="decision-card good">
+          <h3>Use it when</h3>
+          <p>The platform needs S3-compatible storage fully controlled inside OpenShift or on company-managed infrastructure.</p>
+        </div>
+        <div class="decision-card warn">
+          <h3>Validate first when</h3>
+          <p>The workload depends on strict latency targets, high multipart throughput, object lock governance, lifecycle timing, or degraded write behavior.</p>
+        </div>
+        <div class="decision-card stop">
+          <h3>Do not use it when</h3>
+          <p>The requirement is direct AWS-managed integrations such as EventBridge, SNS, SQS, Lambda triggers, or AWS account-level IAM semantics.</p>
+        </div>
+      </div>
+    </section>
+
+    <h2>Production Validation</h2>
+    <ul>
+      <li>Verify AWS CLI and SDK operations against the same endpoint that applications will use.</li>
+      <li>Test authorized and unauthorized requests so policy failures are distinguishable from storage failures.</li>
+      <li>Run multipart upload, object tags, metadata, list by prefix, delete, and read-after-write checks.</li>
+      <li>Confirm metrics, audit records, access logs, and alert rules before onboarding production workloads.</li>
+      <li>For protected data modes, test one-node outage during continuous writes and verify object integrity after healing.</li>
+    </ul>
+    </article>
+  </main>
+  <script src="assets/site.js"></script>
+  <footer>Li9 S3 Storage runtime documentation image</footer>
+</body>
+</html>

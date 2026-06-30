@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Runtime Architecture - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Storage Runtime</div>
+      <nav>
+        <a href="/">Docs Home</a>
+        <a href="index.html">Overview</a>
+        <a href="usage.html">Usage</a>
+        <a href="services.html">Services</a>
+        <a href="architecture.html">Architecture</a>
+      </nav>
+    </div>
+  </header>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="/">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="/install.html">Overview</a>
+        <a href="/install-openshift.html">OpenShift Operator</a>
+        <a href="/install-helm.html">Helm Chart</a>
+        <a href="/install-linux.html">Linux Packages</a>
+        <a href="/install-windows.html">Windows Packages</a>
+        <a href="/install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="/administration.html">Overview</a>
+        <a class="sub" href="/administration.html#buckets">Buckets and access</a>
+        <a class="sub" href="/administration.html#security">Security and encryption</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="/operations.html">Core operations</a>
+        <a class="sub" href="/troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="/reference.html">Reference index</a>
+        <a class="sub" href="/cr-examples.html">CR examples</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Runtime</h3>
+        <a href="index.html">Overview</a>
+        <a href="usage.html">Usage</a>
+        <a href="services.html">Services</a>
+        <a href="architecture.html">Architecture</a>
+      </div>
+    </aside>
+    <article class="docs-content">
+    <div class="intro">
+      <div class="eyebrow">Runtime architecture</div>
+      <h1>Independent planes with a closed failure model.</h1>
+      <p class="lede">The runtime is split into narrow services so authorization, metadata, object placement, encryption, audit, and repair can be tested and released independently. The core safety rule is simple: data is committed only after the selected protection mode has durably accepted the write.</p>
+    </div>
+
+    <section class="section-band">
+      <h2>Request Lifecycle</h2>
+      <p>This is the main product view for administrators and engineers. It shows the synchronous path that must succeed before the client receives success.</p>
+
+      <div class="architecture-map" aria-label="Li9 S3 request lifecycle">
+        <div class="flow-diagram">
+          <div class="flow-step">
+            <div class="step-number">1</div>
+            <div class="step-title">Client request</div>
+            <div class="step-body">AWS CLI, SDK, backup tool, logging stack, or application pod sends a normal S3 request with an endpoint override.</div>
+            <span class="step-chip">AWS CLI</span>
+            <span class="step-chip">SDK</span>
+          </div>
+          <div class="flow-arrow">-></div>
+          <div class="flow-step security">
+            <div class="step-number">2</div>
+            <div class="step-title">S3 edge and auth</div>
+            <div class="step-body"><code>s3-gateway</code> validates SigV4, resolves identity, evaluates bucket policy, and rejects unauthorized requests before object work starts.</div>
+            <span class="step-chip">s3-gateway</span>
+            <span class="step-chip">policy-service</span>
+          </div>
+          <div class="flow-arrow">-></div>
+          <div class="flow-step control">
+            <div class="step-number">3</div>
+            <div class="step-title">Metadata decision</div>
+            <div class="step-body">Bucket configuration, object version state, tags, lock status, lifecycle state, and manifest ownership are read from the metadata plane.</div>
+            <span class="step-chip">bucket-service</span>
+            <span class="step-chip">metadata-service</span>
+          </div>
+          <div class="flow-arrow">-></div>
+          <div class="flow-step data">
+            <div class="step-number">4</div>
+            <div class="step-title">Protected data write</div>
+            <div class="step-body"><code>object-service</code> writes erasure-coded shards or replicated copies to selected storage nodes and waits for the required commit.</div>
+            <span class="step-chip">object-service</span>
+            <span class="step-chip">storage-node</span>
+          </div>
+          <div class="flow-arrow">-></div>
+          <div class="flow-step">
+            <div class="step-number">5</div>
+            <div class="step-title">Commit and background work</div>
+            <div class="step-body">Object metadata becomes visible only after the protected write succeeds. Audit, lifecycle, archive, replication, and healing continue asynchronously.</div>
+            <span class="step-chip">audit-service</span>
+            <span class="step-chip">healing-service</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Runtime Planes</h2>
+      <p>The plane model keeps responsibilities explicit. Each plane can evolve without forcing every runtime component to be rebuilt or retested from scratch.</p>
+      <div class="plane-grid">
+        <div class="plane-card">
+          <div class="eyebrow">API plane</div>
+          <h3>S3 protocol</h3>
+          <p><code>s3-gateway</code> owns SigV4, S3 request parsing, multipart upload behavior, tags, checksums, and client responses.</p>
+        </div>
+        <div class="plane-card">
+          <div class="eyebrow">Security plane</div>
+          <h3>Identity, policy, keys</h3>
+          <p>Identity, bucket policy, TLS, KMS-style keys, audit events, and credential lifecycle stay isolated from data placement.</p>
+        </div>
+        <div class="plane-card">
+          <div class="eyebrow">Control plane</div>
+          <h3>Bucket state</h3>
+          <p>Bucket configuration, lifecycle, archive, replication, object lock, and website settings are centralized and API-visible.</p>
+        </div>
+        <div class="plane-card">
+          <div class="eyebrow">Metadata plane</div>
+          <h3>Raft / KV / WAL</h3>
+          <p>Metadata is a durable product plane. It may use dedicated PVCs or be colocated with data in per-node PVC deployments.</p>
+        </div>
+        <div class="plane-card">
+          <div class="eyebrow">Data plane</div>
+          <h3>Protected bytes</h3>
+          <p>Object bytes are written as erasure-coded shards or replicated copies, then repaired by background healing when nodes return.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Data Protection Modes</h2>
+      <div class="grid two">
+        <div class="panel">
+          <h3>ErasureCoding</h3>
+          <p><strong>Best fit:</strong> multi-node clusters where storage efficiency matters and the platform can provide enough failure domains.</p>
+          <p><strong>How it works:</strong> each object is split into <code>dataShards</code> plus <code>parityShards</code>. Data shards contain encoded content. Parity shards allow reconstruction after allowed failures.</p>
+          <p><strong>Operational rule:</strong> metadata is committed only after all required shards are durably written.</p>
+        </div>
+        <div class="panel">
+          <h3>Replication</h3>
+          <p><strong>Best fit:</strong> small clusters, single-node labs, edge deployments, and cases where simple full-copy behavior is preferred.</p>
+          <p><strong>How it works:</strong> each object is stored as full copies according to the configured replica count.</p>
+          <p><strong>Operational rule:</strong> production settings should still define placement and failure-domain labels so replicas do not silently collapse onto the same risk domain.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Metadata Placement</h2>
+      <table>
+        <thead>
+          <tr><th>Mode</th><th>When to use</th><th>Operational consequence</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Dedicated metadata PVCs</td><td>Production clusters that want separate capacity, I/O, and lifecycle for metadata.</td><td>Metadata StatefulSet can be sized and rolled independently from data nodes.</td></tr>
+          <tr><td>Colocated with data PVCs</td><td>Per-node RWO deployments where metadata must land on the same nodes as data.</td><td>Data and metadata run in the same pod so scheduler placement cannot diverge.</td></tr>
+          <tr><td>External metadata backend</td><td>Future integrations where an approved external metadata system is authoritative.</td><td>Failure domain defaults to the external storage system and must be validated separately.</td></tr>
+        </tbody>
+      </table>
+      <p class="table-note">The product default is Raft/KV/WAL metadata. The CR should expose placement and capacity choices, not a menu of unimplemented consensus engines.</p>
+    </section>
+
+    <section>
+      <h2>Failure Model</h2>
+      <table>
+        <thead>
+          <tr><th>Event</th><th>Expected behavior</th><th>What operators check</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>One storage node unavailable</td><td>Reads and writes continue only if the configured protection mode can still satisfy durability.</td><td>Degraded metrics, storage-node health, healing queue depth.</td></tr>
+          <tr><td>Metadata quorum unavailable</td><td>S3 writes fail closed; the system does not accept updates that cannot be committed consistently.</td><td>Raft member health, WAL errors, metadata request latency.</td></tr>
+          <tr><td>Split brain risk</td><td>Storage becomes unavailable instead of accepting divergent writes.</td><td>Fencing decisions, failure-domain reachability, rejected write counters.</td></tr>
+          <tr><td>Node returns after outage</td><td>Healing validates manifests, detects missing or stale shards, and repairs idempotently.</td><td>Healing success/error counters, repaired object count, audit trail.</td></tr>
+          <tr><td>PVC expansion</td><td>Operator expands PVCs and rolls single-writer workloads in sequence.</td><td>PVC capacity, pod restarts, filesystem visible size inside pods.</td></tr>
+        </tbody>
+      </table>
+    </section>
+    </article>
+  </main>
+  <script src="assets/site.js"></script>
+  <footer>Li9 S3 Storage runtime documentation image</footer>
+</body>
+</html>

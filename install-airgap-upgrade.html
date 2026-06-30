@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Private Registry And Airgap Upgrade - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub active" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Private Registry And Airgap</div>
+        <h1>Private Registry And Airgap: Upgrade.</h1>
+        <p class="lede">Upgrade safely with pre-checks, risk controls, rollout verification, and rollback awareness.</p>
+      </section>
+
+      <h2>Upgrade</h2>
+      <p>Airgap upgrades are two-step operations: promote artifacts first, then upgrade the selected installation type from the internal source.</p>
+      <table>
+        <thead><tr><th>Risk</th><th>What Can Happen</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>Incomplete mirror</td><td>Operator or runtime pulls fail because a related image was missed.</td><td>Mirror from the release manifest and verify every digest before approving rollout.</td></tr>
+          <tr><td>Mutable tags</td><td>Tag references may point to different content after promotion.</td><td>Prefer digest-pinned images and checksum-verified package artifacts.</td></tr>
+          <tr><td>Catalog mismatch</td><td>Catalog points to bundle images that were not mirrored.</td><td>Inspect bundle relatedImages before publishing the catalog.</td></tr>
+          <tr><td>Trust failure</td><td>Cluster nodes reject the internal registry CA or internal package repository trust chain.</td><td>Distribute the registry CA and package repository keys before the upgrade window.</td></tr>
+        </tbody>
+      </table>
+      <pre><code># Stage new artifacts
+export TARGET_REGISTRY="registry.li9.internal/li9"
+export TARGET_IMAGE_REPO="${TARGET_REGISTRY}/li9-operators"
+export LI9_TARGET_OPERATOR_VERSION="1.1.0-alpha.40"
+export LI9_TARGET_CHART_VERSION="1.1.0-alpha.15"
+export LI9_TARGET_RUNTIME_PACKAGE_VERSION="1.1.0-alpha.14"
+: "${INTERNAL_CHART_REPO:?set to your internal Helm chart repository URL}"
+
+while read -r image; do
+  tag="${image##*:}"
+  skopeo copy --all "docker://${image}" "docker://${TARGET_IMAGE_REPO}:${tag}"
+done &lt; li9-s3-images-new-version.txt
+
+# Update catalog source image
+oc patch catalogsource -n openshift-marketplace li9-operators --type merge \
+  -p "{\"spec\":{\"image\":\"${TARGET_IMAGE_REPO}:li9-s3-catalog-v${LI9_TARGET_OPERATOR_VERSION}\"}}"
+oc wait pod -n openshift-marketplace -l olm.catalogSource=li9-operators --for=condition=Ready --timeout=5m
+
+# Then upgrade through the selected installation page:
+# Operator: approve/install new InstallPlan.
+# Helm: helm upgrade from internal chart repo.
+# Linux: dnf/apt upgrade from internal package repo.
+# Windows: MSI/ZIP upgrade from internal package share.</code></pre>
+
+      <h2>Promotion Verification</h2>
+      <p>Before upgrading a disconnected cluster or host fleet, verify the promoted release as an artifact set. The bundle, catalog, runtime images, Helm chart OCI artifact, RPM/DEB packages, MSI, ZIP, SBOMs, and checksums must all refer to the same release contract.</p>
+      <pre><code>skopeo inspect "docker://${TARGET_IMAGE_REPO}:li9-s3-catalog-v${LI9_TARGET_OPERATOR_VERSION}"
+helm repo add li9-s3-internal "${INTERNAL_CHART_REPO}"
+helm repo update
+helm pull li9-s3-internal/li9-s3-storage --version "${LI9_TARGET_CHART_VERSION}"
+sha256sum -c checksums.txt --ignore-missing
+export LI9_WINDOWS_MSI_PATH="./li9-s3-storage-windows-${LI9_TARGET_RUNTIME_PACKAGE_VERSION}.msi"
+if [ -f "${LI9_WINDOWS_MSI_PATH}" ] &amp;&amp; command -v pwsh &gt;/dev/null 2&gt;&amp;1; then
+  pwsh -NoProfile -Command 'Get-FileHash $env:LI9_WINDOWS_MSI_PATH -Algorithm SHA256'
+fi</code></pre>
+
+      <h2>Rollback Guidance</h2>
+      <p>Keep the previous internal catalog and package repositories until every target has passed post-upgrade validation. Rollback means switching the consumer back to the previous internal release source, not pulling from the public internet.</p>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Windows Host Reference - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-platform.html">Platform reference</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / Platform / Windows</div>
+        <h1>Windows host package reference.</h1>
+        <p class="lede">Use this reference when MSI or ZIP artifacts install Li9 S3 onto Windows hosts and Windows Service Control Manager owns service lifecycle.</p>
+      </section>
+
+      <h2>Ownership Model</h2>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-windows-host-flow.png" alt="Windows package deployment flow. MSI or ZIP packages install the runtime; Windows Service Control Manager owns service lifecycle." loading="lazy">
+        <figcaption>Use the Windows reference when Li9 S3 is deployed onto Windows hosts instead of Kubernetes or Linux package targets.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Layer</th><th>Owner</th><th>Windows Surface</th><th>Operational Rule</th></tr></thead>
+        <tbody>
+          <tr><td>Package lifecycle</td><td>MSI or ZIP installer</td><td>MSI product code, PowerShell install scripts, internal artifact shares</td><td>Upgrade through signed MSI/ZIP artifacts and verify service health after each node.</td></tr>
+          <tr><td>Service lifecycle</td><td>Service Control Manager</td><td><code>Li9S3*</code> Windows services</td><td>Use PowerShell service commands for start, stop, restart, and status checks.</td></tr>
+          <tr><td>Runtime configuration</td><td>Host config files</td><td><code>C:\ProgramData\Li9\S3\storage.yaml</code>, TLS file paths or certificate references</td><td>Configuration management should render files consistently on every node.</td></tr>
+          <tr><td>Data and metadata</td><td>Persistent NTFS/ReFS volumes</td><td><code>C:\ProgramData\Li9\S3\data</code>, <code>metadata</code>, <code>wal</code></td><td>Volumes must survive reboot and must not be removed by uninstall unless explicitly requested.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Host Paths And Services</h2>
+      <table>
+        <thead><tr><th>Item</th><th>Default</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>Config directory</td><td><code>C:\ProgramData\Li9\S3</code></td><td>Cluster config, runtime config, and TLS references.</td></tr>
+          <tr><td>Data directory</td><td><code>C:\ProgramData\Li9\S3\data</code></td><td>Object payload shards or replicated object data.</td></tr>
+          <tr><td>Metadata directory</td><td><code>C:\ProgramData\Li9\S3\metadata</code></td><td>Raft/KV state, snapshots, and product metadata.</td></tr>
+          <tr><td>WAL directory</td><td><code>C:\ProgramData\Li9\S3\wal</code></td><td>Metadata write-ahead log; prefer low-latency storage.</td></tr>
+          <tr><td>Log destination</td><td>Windows Event Log and product log directory</td><td>Service logs, audit delivery diagnostics, and package troubleshooting.</td></tr>
+          <tr><td>Main service group</td><td><code>Li9S3*</code></td><td>Gateway, metadata, object, storage-node, KMS, audit, and healing services.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Common Commands</h2>
+      <pre><code>Get-Service Li9S3*
+Get-EventLog -LogName Application -Source Li9S3* -Newest 50
+&amp; 'C:\Program Files\Li9\S3\li9-s3ctl.exe' health --config 'C:\ProgramData\Li9\S3\storage.yaml'
+&amp; 'C:\Program Files\Li9\S3\li9-s3ctl.exe' cluster members --config 'C:\ProgramData\Li9\S3\storage.yaml'</code></pre>
+
+      <h2>Useful Entry Points</h2>
+      <ul>
+        <li><a href="install-windows-prerequisites.html">Windows prerequisites</a></li>
+        <li><a href="install-windows-installation.html">Windows installation</a></li>
+        <li><a href="install-windows-upgrade.html">Windows upgrade</a></li>
+        <li><a href="reference-platform-storage-topology.html">Storage topology</a></li>
+        <li><a href="reference-platform-metadata-durability.html">Metadata durability</a></li>
+        <li><a href="reference-s3-core-bucket-object-api.html">S3 bucket/object usage</a></li>
+      </ul>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

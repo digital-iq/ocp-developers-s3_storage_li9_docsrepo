@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Helm Chart Upgrade - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub active" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Helm Chart</div>
+        <h1>Helm Chart: Upgrade.</h1>
+        <p class="lede">Upgrade safely with pre-checks, risk controls, rollout verification, and rollback awareness.</p>
+      </section>
+
+      <h2>Upgrade</h2>
+      <p>Helm upgrades can replace runtime pod templates, change PVC requests, change ServiceMonitor labels, or update image tags. Always diff and dry-run before applying.</p>
+      <table>
+        <thead><tr><th>Risk</th><th>What Can Happen</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>Values drift</td><td>Changing values accidentally disables route, monitoring, or storage topology.</td><td>Keep values in Git and compare with <code>helm get values</code>.</td></tr>
+          <tr><td>Pod restart</td><td>Stateful workloads restart and capacity is reduced during rollout.</td><td>Upgrade only when all nodes are healthy and no repair is running.</td></tr>
+          <tr><td>PVC resize</td><td>PVC request changes may require pod restart or storage-class expansion support.</td><td>Check <code>allowVolumeExpansion</code> and verify PVC capacity after rollout.</td></tr>
+          <tr><td>Rollback mismatch</td><td>Rolling back chart templates may not roll back data format changes.</td><td>Confirm runtime release notes before rollback.</td></tr>
+        </tbody>
+      </table>
+      <pre><code>export LI9_NS=li9-s3-helm
+helm repo update
+helm get values li9-s3 -n "${LI9_NS}" &gt; current-values.yaml
+helm template li9-s3 li9-s3/li9-s3-storage -n "${LI9_NS}" -f values-li9-s3.yaml &gt; next-rendered.yaml
+kubectl apply --dry-run=server -f next-rendered.yaml
+helm upgrade li9-s3 li9-s3/li9-s3-storage \
+  --namespace "${LI9_NS}" \
+  --values values-li9-s3.yaml \
+  --wait \
+  --timeout 20m
+helm history li9-s3 -n "${LI9_NS}"
+oc get pods,pvc -n "${LI9_NS}" -l app.kubernetes.io/part-of=li9-s3</code></pre>
+
+      <h2>Post-Upgrade Verification</h2>
+      <p>Confirm that the rendered chart still matches the intended control plane and that no operator-managed installation is present in the same namespace. Helm installs must be independent from OLM installs to avoid two controllers managing the same runtime resources.</p>
+      <pre><code>helm status li9-s3 -n "${LI9_NS}"
+helm get values li9-s3 -n "${LI9_NS}" --all
+oc get pods,statefulset,deploy,pvc,svc,route -n "${LI9_NS}" -l app.kubernetes.io/part-of=li9-s3
+oc get subscription,csv -A | grep li9-s3 || true
+oc get events -n "${LI9_NS}" --field-selector type=Warning | grep li9-s3 || true</code></pre>
+
+      <h2>Rollback Guidance</h2>
+      <p><code>helm rollback</code> can restore templates and values, but it cannot reverse data-format migrations. Use rollback only when the target runtime version is marked downgrade-compatible. If the issue is a bad value, prefer a forward <code>helm upgrade</code> that corrects the value.</p>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

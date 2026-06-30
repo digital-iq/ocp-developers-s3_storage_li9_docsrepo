@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Windows Packages Uninstall - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub active" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Windows Packages</div>
+        <h1>Windows Packages: Uninstall.</h1>
+        <p class="lede">Remove the installation in dependency order and verify that managed resources are gone.</p>
+      </section>
+
+      <h2>Uninstall Checklist</h2>
+      <p>Stop Li9 S3 processes before removing binaries. Treat data, metadata, KMS, fencing, and audit directories as retained production state unless destructive cleanup is explicitly approved.</p>
+      <div class="callout warning">
+        Deleting <code>%ProgramData%\Li9\S3Storage</code> removes local data, metadata, generated fencing token, generated KMS key, and logs.
+      </div>
+      <table>
+        <thead><tr><th>Step</th><th>Purpose</th><th>Expected Result</th></tr></thead>
+        <tbody>
+          <tr><td>Validate health</td><td>Confirm the cluster can tolerate removing this Windows node.</td><td>Gateway, control API, and storage-node <code>/v1/info</code> endpoints are healthy before process stop.</td></tr>
+          <tr><td>Stop processes</td><td>Stop accepting local traffic and remove PID files.</td><td>No Li9 S3 process is running from the install directory.</td></tr>
+          <tr><td>Remove package</td><td>Uninstall MSI or remove ZIP directory.</td><td>No executable path remains under the install directory.</td></tr>
+          <tr><td>Review retained data</td><td>Decide whether local data is evidence, backup source, or disposable state.</td><td>Data directories are retained or deleted intentionally.</td></tr>
+        </tbody>
+      </table>
+      <pre><code>$InstallDir = "C:\Program Files\Li9\S3Storage"
+if (-not (Test-Path $InstallDir)) { $InstallDir = "C:\Li9\S3Storage" }
+&amp; "$InstallDir\scripts\Stop-Li9S3Services.ps1"
+
+# MSI uninstall
+$Li9NativeVersion = "1.1.0-alpha.14"
+$Msi = "C:\Temp\li9-s3-storage-windows-$Li9NativeVersion.msi"
+if (Test-Path $Msi) {
+  msiexec.exe /x $Msi /qn /norestart
+}
+
+# ZIP uninstall
+if (Test-Path "C:\Li9\S3Storage") {
+  Remove-Item C:\Li9\S3Storage -Recurse -Force
+}
+
+Get-Process | Where-Object { $_.Path -like "*Li9*S3Storage*" }
+Get-NetTCPConnection -LocalPort 9000,9001,9002,9003,9004,9005,9006,9007,9008,9009,9010 -ErrorAction SilentlyContinue
+
+# Destructive cleanup only:
+# Remove-Item "$env:ProgramData\Li9\S3Storage" -Recurse -Force</code></pre>
+      <figure class="docs-screenshot">
+        <img src="assets/screenshots/windows-installed-apps-uninstall.png" alt="Windows Installed apps view showing Li9 S3 Storage selected before uninstall" loading="lazy">
+        <figcaption>Expected Windows Installed apps view before MSI removal.</figcaption>
+      </figure>
+
+      <h2>Verification</h2>
+      <p>Verify from PowerShell and from an external S3 client. If this is a rolling removal from a Windows cluster, run cluster health checks from a remaining node or admin workstation that still has the tools installed.</p>
+      <pre><code>Get-Process | Where-Object { $_.Path -like "*Li9*S3Storage*" }
+Test-NetConnection 10.20.10.11 -Port 9000
+
+# From a remaining node or admin workstation:
+aws --endpoint-url $env:S3_ENDPOINT s3api list-buckets
+$Li9Scheme = if ($Li9Scheme) { $Li9Scheme } else { "http" }
+$Li9ControlHost = if ($Li9ControlHost) { $Li9ControlHost } else { "10.20.10.11" }
+$Li9GatewayHost = if ($Li9GatewayHost) { $Li9GatewayHost } else { "10.20.10.11" }
+Invoke-WebRequest "${Li9Scheme}://${Li9GatewayHost}:9000/v1/info" -UseBasicParsing
+Invoke-WebRequest "${Li9Scheme}://${Li9ControlHost}:9001/v1/info" -UseBasicParsing</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

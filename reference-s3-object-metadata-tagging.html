@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Object Metadata And Tagging - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / S3 API</div>
+        <h1>Object metadata and tagging.</h1>
+        <p class="lede">Metadata and tags attach searchable, policy-relevant, and lifecycle-relevant attributes to objects. Metadata is returned through object headers; tags are managed through the S3 tagging APIs and can participate in lifecycle and replication filters.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-s3-api.html">All S3 API reference pages</a></p>
+
+      <details class="reference-setup">
+        <summary>Common AWS CLI setup</summary>
+        <p>Run this once for a bucket issued by the active platform control surface. On OpenShift, the values come from the generated <code>S3Bucket</code> or <code>S3BucketAccess</code> Secret. On Helm, Linux, or Windows, use the credentials issued by the runtime control API or administrator tooling.</p>
+        <pre><code>export NS=li9-s3-runtime
+export BUCKET_CR=app-data
+export BUCKET="$(oc -n "$NS" get s3bucket "$BUCKET_CR" -o jsonpath='{.status.bucketName}')"
+export SECRET="$(oc -n "$NS" get s3bucket "$BUCKET_CR" -o jsonpath='{.status.secretName}')"
+export ENDPOINT="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ENDPOINT_URL}' | base64 -d)"
+export AWS_ACCESS_KEY_ID="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)"
+export AWS_SECRET_ACCESS_KEY="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)"
+export AWS_REGION="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_REGION}' 2&gt;/dev/null | base64 -d || true)"
+export AWS_REGION="${AWS_REGION:-us-east-1}"
+export AWS_EC2_METADATA_DISABLED=true
+li9s3() {
+  aws --endpoint-url "$ENDPOINT" --region "$AWS_REGION" --no-verify-ssl s3api "$@"
+}</code></pre>
+        <p>For Helm, Linux, and Windows replace the exported values with the endpoint and credentials from that platform. The commands below intentionally use standard AWS CLI syntax after the setup.</p>
+      </details>
+
+      <h2 id="metadata-vs-tags">Metadata Versus Tags</h2>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-s3-object-metadata-tagging-flow.png" alt="Metadata and tagging flow. Object metadata and tags attach attributes used by clients, policies, lifecycle rules, replication filters, and inventory." loading="lazy">
+        <figcaption>Use metadata for client-visible object attributes and tags for policy or automation decisions that need structured keys.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Feature</th><th>Use For</th><th>Important Behavior</th></tr></thead>
+        <tbody>
+          <tr><td>User metadata</td><td>Application annotations returned with object headers.</td><td>Set at object write/copy time and stored with the object version.</td></tr>
+          <tr><td>Object tags</td><td>Lifecycle, replication, classification, and authorization conditions.</td><td>Can be updated independently and can be version-specific.</td></tr>
+          <tr><td>Bucket tags</td><td>Administrative classification of buckets.</td><td>Useful for reporting and ownership workflows.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="object-example">Object Metadata And Tags</h2>
+      <pre><code>printf 'metadata
+' &gt; /tmp/metadata.txt
+li9s3 put-object   --bucket "$BUCKET"   --key metadata/item.txt   --body /tmp/metadata.txt   --metadata owner=platform,environment=test   --tagging 'project=li9&amp;class=demo'
+li9s3 head-object --bucket "$BUCKET" --key metadata/item.txt --query Metadata
+li9s3 get-object-tagging --bucket "$BUCKET" --key metadata/item.txt
+li9s3 put-object-tagging --bucket "$BUCKET" --key metadata/item.txt --tagging 'TagSet=[{Key=project,Value=li9},{Key=class,Value=verified}]'
+li9s3 get-object-tagging --bucket "$BUCKET" --key metadata/item.txt</code></pre>
+
+      <h2 id="bucket-tags">Bucket Tags</h2>
+      <pre><code>li9s3 put-bucket-tagging --bucket "$BUCKET" --tagging 'TagSet=[{Key=owner,Value=platform},{Key=environment,Value=test}]'
+li9s3 get-bucket-tagging --bucket "$BUCKET"</code></pre>
+
+      <h2 id="validation-rules">Validation Rules</h2>
+      <ul>
+        <li>Reserved metadata prefixes are controlled by the service and should not be used by applications.</li>
+        <li>Tag keys and values should follow AWS-compatible size and count limits.</li>
+        <li>Lifecycle and replication tag filters match exact tag key/value pairs.</li>
+      </ul>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

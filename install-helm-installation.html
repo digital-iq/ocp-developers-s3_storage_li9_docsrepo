@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Helm Chart Installation - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub active" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Helm Chart</div>
+        <h1>Helm Chart: Installation.</h1>
+        <p class="lede">Run the production installation procedure with copy-paste commands and field references.</p>
+      </section>
+
+      <h2>Installation</h2>
+      <div class="procedure">
+        <div class="procedure-item"><div><h3>1. Add the chart repository</h3><p>Use public chart source for online installs or internal chart source for air-gapped installs.</p></div></div>
+        <div class="procedure-item"><div><h3>2. Create values file</h3><p>Declare image source, gateway exposure, storage topology, metadata placement, and observability.</p></div></div>
+        <div class="procedure-item"><div><h3>3. Render and install</h3><p>Review manifests, run server-side validation, then install the release with <code>helm upgrade --install --wait</code>.</p></div></div>
+        <div class="procedure-item"><div><h3>4. Verify runtime and S3</h3><p>Check pods, PVCs, services, route or ingress, metrics objects, and AWS CLI behavior from outside the runtime pods.</p></div></div>
+      </div>
+
+      <h3>1. Add Chart Repository</h3>
+      <p>Use the <a href="https://digital-iq.github.io/ocp-developers-s3_storage_li9_helmrepo">public Helm repository</a> for connected installs, or replace <code>LI9_HELM_REPO</code> with your internal chart repository URL.</p>
+      <pre><code>: "${LI9_HELM_REPO:?set to the public Helm repository or internal chart repository URL}"
+export LI9_CHART_VERSION=1.1.0-alpha.15
+export LI9_CHART_URL="${LI9_HELM_REPO}/li9-s3-storage-${LI9_CHART_VERSION}.tgz"
+export LI9_CHART_SHA256=28664fbc774e79a7c227de80acbcfba2b91c5fe457e664d92a74e4e0c78f6043
+
+curl -fL "${LI9_CHART_URL}" -o "/tmp/li9-s3-storage-${LI9_CHART_VERSION}.tgz"
+printf '%s  %s\n' "${LI9_CHART_SHA256}" "/tmp/li9-s3-storage-${LI9_CHART_VERSION}.tgz" | sha256sum -c -
+
+helm repo add li9-s3 "${LI9_HELM_REPO}"
+helm repo update
+helm show chart li9-s3/li9-s3-storage --version "${LI9_CHART_VERSION}"
+
+# Air-gapped
+helm repo add li9-s3 "${INTERNAL_CHART_REPO}"
+helm repo update
+helm show chart li9-s3/li9-s3-storage --version "${LI9_CHART_VERSION}"</code></pre>
+
+      <h3>2. Create Values File</h3>
+      <pre><code>cat &gt; values-li9-s3.yaml &lt;&lt;'EOF'
+images:
+  repository: quay.io/li9/li9-operators
+  tag: ""
+imagePullSecrets: []
+openshift:
+  enabled: true
+
+region:
+  default: li9-mgm01
+  allowed:
+    - li9-mgm01
+    - us-east-1
+
+gateway:
+  routeEnabled: true
+
+runtime:
+  replicas: 2
+  storageNodeReplicas: 3
+  writeQuorum: 2
+storage:
+  topology:
+    mode: PerNodePVC
+  objectBackend:
+    type: StorageNodeErasure
+    volumeSize: 20Gi
+    storageClassName: ocs-storagecluster-ceph-rbd
+  metadata:
+    mode: DedicatedPVC
+    volumeSize: 5Gi
+    storageClassName: ocs-storagecluster-ceph-rbd
+EOF</code></pre>
+
+      <h3>Helm Values Reference</h3>
+      <table>
+        <thead><tr><th>Value</th><th>Description</th><th>Allowed Or Recommended Values</th></tr></thead>
+        <tbody>
+          <tr><td><code>LI9_CHART_URL</code></td><td>Direct chart artifact used by this install guide.</td><td><a href="https://digital-iq.github.io/ocp-developers-s3_storage_li9_helmrepo/li9-s3-storage-1.1.0-alpha.15.tgz">Helm chart archive</a>.</td></tr>
+          <tr><td><code>images.repository</code></td><td>Repository containing runtime images.</td><td><code>quay.io/li9/li9-operators</code> online; internal registry path for air-gapped installs.</td></tr>
+          <tr><td><code>images.tag</code></td><td>Runtime image version suffix. Empty uses chart <code>appVersion</code>.</td><td>Empty resolves this chart to runtime image tags such as <code>quay.io/li9/li9-operators:li9-s3-gateway-v1.1.0-alpha.15</code>.</td></tr>
+          <tr><td><code>imagePullSecrets</code></td><td>Pull secrets attached to runtime pods.</td><td>Empty list for public images; list of Secret names for private registries.</td></tr>
+          <tr><td><code>openshift.enabled</code></td><td>Renders OpenShift-specific resources such as Route, ServiceMonitor, PrometheusRule, and NetworkPolicy.</td><td><code>true</code> for OpenShift installs.</td></tr>
+          <tr><td><code>region.default</code></td><td>Default S3 region for buckets created without a location constraint.</td><td>Example: <code>li9-mgm01</code>. If omitted, the chart uses <code>us-east-1</code>.</td></tr>
+          <tr><td><code>region.allowed</code></td><td>Explicit region allow-list served by this Helm release.</td><td>Must include <code>region.default</code> when set. Empty means only the default region is allowed.</td></tr>
+          <tr><td><code>gateway.routeEnabled</code></td><td>Creates OpenShift Route.</td><td><code>false</code> by default; <code>true</code> when route exposure is desired.</td></tr>
+          <tr><td><code>runtime.replicas</code></td><td>Replica count for replicated control/gateway services.</td><td><code>2</code> or more for production.</td></tr>
+          <tr><td><code>runtime.storageNodeReplicas</code></td><td>Number of storage-node pods.</td><td>Must satisfy the chosen write quorum and data-protection target.</td></tr>
+          <tr><td><code>runtime.writeQuorum</code></td><td>Minimum storage-node writes needed to commit object payloads.</td><td>For three storage nodes, <code>2</code> tolerates one node outage.</td></tr>
+          <tr><td><code>storage.topology.mode</code></td><td>Data PVC topology.</td><td><code>PerNodePVC</code> or <code>SharedPVC</code>.</td></tr>
+          <tr><td><code>storage.objectBackend.type</code></td><td>Object payload backend.</td><td><code>StorageNodeErasure</code> for Li9-owned storage nodes; <code>Filesystem</code> for S3-over-PVC.</td></tr>
+          <tr><td><code>storage.objectBackend.volumeSize</code></td><td>Object data PVC size.</td><td>Kubernetes quantity such as <code>20Gi</code> or <code>1Ti</code>.</td></tr>
+          <tr><td><code>storage.objectBackend.storageClassName</code></td><td>Object data PVC StorageClass.</td><td>Any class compatible with the selected topology.</td></tr>
+          <tr><td><code>storage.metadata.mode</code></td><td>Metadata placement.</td><td><code>DedicatedPVC</code> or <code>SharedDataPVC</code>.</td></tr>
+          <tr><td><code>storage.metadata.volumeSize</code></td><td>Metadata PVC size.</td><td>Kubernetes quantity such as <code>5Gi</code>.</td></tr>
+          <tr><td><code>storage.metadata.storageClassName</code></td><td>Metadata PVC StorageClass.</td><td>Low-latency class preferred.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3. Render And Install</h3>
+      <pre><code>export LI9_NS=li9-s3-helm
+helm template li9-s3 li9-s3/li9-s3-storage \
+  --namespace "${LI9_NS}" \
+  --version "${LI9_CHART_VERSION}" \
+  --values values-li9-s3.yaml &gt; rendered-li9-s3.yaml
+
+kubectl apply --dry-run=server -f rendered-li9-s3.yaml
+
+helm upgrade --install li9-s3 li9-s3/li9-s3-storage \
+  --namespace "${LI9_NS}" \
+  --create-namespace \
+  --version "${LI9_CHART_VERSION}" \
+  --values values-li9-s3.yaml \
+  --wait \
+  --timeout 20m</code></pre>
+
+      <h3>4. Verify Runtime And S3</h3>
+      <pre><code>helm status li9-s3 -n "${LI9_NS}"
+oc get pods,pvc,svc,route,servicemonitor,prometheusrule -n "${LI9_NS}" -l app.kubernetes.io/part-of=li9-s3
+oc wait pod -n "${LI9_NS}" -l app.kubernetes.io/part-of=li9-s3 --for=condition=Ready --timeout=10m
+
+export S3_ENDPOINT="$(printf '%s://%s' https "$(oc get route -n "${LI9_NS}" li9-s3-gateway -o jsonpath='{.spec.host}' 2&gt;/dev/null || true)")"
+export AWS_DEFAULT_REGION=li9-mgm01
+export LI9_CONTROL_SCHEME=https
+mkdir -p /tmp/li9-s3-helm-certs
+oc -n "${LI9_NS}" extract secret/li9-s3-internal-tls --keys=tls.crt,tls.key --to=/tmp/li9-s3-helm-certs --confirm
+oc -n "${LI9_NS}" port-forward svc/control-api 18443:8080 &amp;
+PF_PID=$!
+trap 'kill "${PF_PID}" 2&gt;/dev/null || true' EXIT
+until curl -skS --cert /tmp/li9-s3-helm-certs/tls.crt --key /tmp/li9-s3-helm-certs/tls.key "${LI9_CONTROL_SCHEME}://127.0.0.1:18443/v1/info" &gt;/dev/null; do sleep 1; done
+
+PROVISION_JSON="$(curl -skS --cert /tmp/li9-s3-helm-certs/tls.crt --key /tmp/li9-s3-helm-certs/tls.key \
+  -H 'Content-Type: application/json' \
+  -d "{\"bucketName\":\"helm-install-check\",\"region\":\"${AWS_DEFAULT_REGION}\",\"issueCredential\":true}" \
+  "${LI9_CONTROL_SCHEME}://127.0.0.1:18443/v1/s3-bucket-provisions")"
+export AWS_ACCESS_KEY_ID="$(printf '%s' "${PROVISION_JSON}" | jq -r '.accessKeyId')"
+export AWS_SECRET_ACCESS_KEY="$(printf '%s' "${PROVISION_JSON}" | jq -r '.secretKey')"
+export AWS_SESSION_TOKEN="$(printf '%s' "${PROVISION_JSON}" | jq -r '.sessionToken // empty')"
+
+aws --endpoint-url "${S3_ENDPOINT}" --region "${AWS_DEFAULT_REGION}" s3api head-bucket --bucket helm-install-check
+aws --endpoint-url "${S3_ENDPOINT}" --region "${AWS_DEFAULT_REGION}" s3 cp values-li9-s3.yaml s3://helm-install-check/values.yaml
+aws --endpoint-url "${S3_ENDPOINT}" --region "${AWS_DEFAULT_REGION}" s3 cp s3://helm-install-check/values.yaml -</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

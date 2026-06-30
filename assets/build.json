@@ -1,0 +1,7 @@
+{
+  "buildTag": "local-preview",
+  "component": "operator-docs",
+  "operatorVersion": "local-preview",
+  "sourceRevision": "local",
+  "version": "local-preview"
+}

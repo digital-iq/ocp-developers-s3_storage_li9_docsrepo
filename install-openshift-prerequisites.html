@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenShift Operator Prerequisites - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub active" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">OpenShift Operator</div>
+        <h1>OpenShift Operator: Prerequisites.</h1>
+        <p class="lede">Prepare access, artifacts, storage, network, security, and disconnected sources before installing.</p>
+      </section>
+
+      <h2>Prerequisites</h2>
+      <p>Prepare the cluster before creating OLM resources. The same runtime design applies to online and air-gapped installations; only the artifact source changes.</p>
+
+      <h3>Installation Mode Conflict Check</h3>
+      <div class="callout warning">
+        Operator, Helm, Linux package, and Windows package deployments are separate lifecycle models. Before installing an operator-managed runtime into a namespace, remove any Helm release or host package deployment that manages the same Li9 S3 endpoint, PVCs, Services, CRs, or storage paths.
+      </div>
+
+      <h3>Online Prerequisites</h3>
+      <table>
+        <thead><tr><th>Check</th><th>Command Or Decision</th><th>Expected Result</th></tr></thead>
+        <tbody>
+          <tr><td>Cluster login</td><td><code>oc whoami</code> and <code>oc auth can-i create catalogsources -n openshift-marketplace</code></td><td>The admin account can install cluster-scoped OLM content.</td></tr>
+          <tr><td>Catalog access</td><td>Confirm the release catalog image is reachable from cluster nodes.</td><td>The CatalogSource pod can pull and serve the Li9 S3 package.</td></tr>
+          <tr><td>Storage classes</td><td><code>oc get storageclass</code></td><td>Choose classes for data PVCs, metadata PVCs, and optional archive PVCs.</td></tr>
+          <tr><td>Node placement</td><td><code>oc get nodes --show-labels</code></td><td>Node labels and optional tolerations match the intended storage failure domains.</td></tr>
+          <tr><td>Monitoring</td><td>Confirm user workload monitoring policy.</td><td>ServiceMonitor and alert rules can be collected when enabled.</td></tr>
+        </tbody>
+      </table>
+      <pre><code>oc whoami
+oc auth can-i create catalogsources.operators.coreos.com -n openshift-marketplace
+oc auth can-i create subscriptions.operators.coreos.com -n li9-operators
+oc get storageclass
+oc get nodes --show-labels</code></pre>
+
+      <h3>Air-Gapped Prerequisites</h3>
+      <p>Before using this page in a disconnected cluster, mirror the catalog, bundle, operator, runtime, docs, and client test images. The dedicated <a href="install-airgap.html">Private Registry And Airgap</a> page contains the full mirror workflow.</p>
+      <pre><code>export INTERNAL_REGISTRY=image-registry.openshift-image-registry.svc:5000/li9-s3
+oc get imagecontentsourcepolicy,imagedigestmirrorset,imagetagmirrorset 2&gt;/dev/null || true
+oc get secret -n openshift-config pull-secret -o name
+oc get catalogsource -n openshift-marketplace</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

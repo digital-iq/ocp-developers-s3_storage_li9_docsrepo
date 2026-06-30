@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Private Registry And Airgap Prerequisites - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub active" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Private Registry And Airgap</div>
+        <h1>Private Registry And Airgap: Prerequisites.</h1>
+        <p class="lede">Prepare access, artifacts, storage, network, security, and disconnected sources before installing.</p>
+      </section>
+
+      <h2>Prerequisites</h2>
+      <h3>Online Staging Prerequisites</h3>
+      <table>
+        <thead><tr><th>Check</th><th>Command Or Decision</th><th>Expected Result</th></tr></thead>
+        <tbody>
+          <tr><td>Connected staging host</td><td>Host can pull from public Quay/GitHub release locations and push to internal registry.</td><td>Mirror commands can run outside the disconnected cluster.</td></tr>
+          <tr><td>Internal registry</td><td>Registry supports OCI images and Helm OCI artifacts.</td><td>OpenShift nodes can pull from it.</td></tr>
+          <tr><td>Artifact repository</td><td>Internal location exists for RPM, DEB, MSI, and ZIP files.</td><td>Linux and Windows hosts can install without internet access.</td></tr>
+          <tr><td>Release manifest</td><td>Release metadata provides image digests, chart version, and package checksums.</td><td>All artifacts are mirrored by immutable image digest or checksum-verified package version.</td></tr>
+          <tr><td>Trust chain</td><td>Internal registry CA and package signing keys are distributed.</td><td>Cluster nodes, Linux hosts, Windows hosts, and admin workstations trust internal sources.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Disconnected Cluster Prerequisites</h3>
+      <pre><code>oc whoami
+oc get secret -n openshift-config pull-secret -o name
+oc get imagecontentsourcepolicy,imagedigestmirrorset,imagetagmirrorset 2&gt;/dev/null || true
+oc get catalogsource -n openshift-marketplace
+oc get nodes</code></pre>
+
+      <h3>Artifact Set</h3>
+      <p>A disconnected installation is only repeatable when every artifact for the release is promoted together. Do not mirror only the operator image; the catalog, bundle, runtime images, documentation images, Helm chart, Linux packages, Windows packages, checksums, and SBOMs must come from the same release contract.</p>
+      <table>
+        <thead><tr><th>Artifact</th><th>Destination</th><th>Validation</th></tr></thead>
+        <tbody>
+          <tr><td>Operator catalog and bundle</td><td>Internal OCI registry used by OLM.</td><td><code>skopeo inspect</code> and CatalogSource pod readiness.</td></tr>
+          <tr><td>Runtime and documentation images</td><td>Internal OCI registry pullable by cluster nodes.</td><td>Digest match against release manifest.</td></tr>
+          <tr><td>Helm chart</td><td>Internal Helm repository or OCI chart path.</td><td><code>helm show chart</code> works without internet.</td></tr>
+          <tr><td>RPM/DEB packages</td><td>Internal Linux package repository.</td><td>Package checksums match and dependencies resolve offline.</td></tr>
+          <tr><td>MSI/ZIP packages</td><td>Internal Windows software share or deployment system.</td><td>MSI and ZIP checksums match the release manifest.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Acceptance Criteria</h3>
+      <p>Before starting installation, verify that a cluster node and an admin workstation can resolve the internal registry, trust its CA, and pull the selected image or package. For OpenShift, the CatalogSource must become Ready before creating Subscriptions.</p>
+      <pre><code>export TARGET_IMAGE_REPO="registry.li9.internal/li9/li9-operators"
+export LI9_RUNTIME_VERSION="1.1.0-alpha.15"
+
+oc run li9-airgap-pullcheck \
+  -n default \
+  --rm -i --restart=Never \
+  --image="${TARGET_IMAGE_REPO}:li9-s3-gateway-v${LI9_RUNTIME_VERSION}" \
+  --command -- /bin/sh -c 'echo pull-ok'
+oc get catalogsource -n openshift-marketplace li9-operators -o yaml</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

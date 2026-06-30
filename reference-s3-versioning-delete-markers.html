@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Versioning And Delete Markers - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / S3 API</div>
+        <h1>Versioning And Delete Markers</h1>
+        <p class="lede">Versioning is configured with the standard S3 API. Object Lock buckets keep versioning enabled.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-s3-api.html">All S3 API reference pages</a></p>
+
+      <details class="reference-setup">
+        <summary>Common AWS CLI setup</summary>
+      <p>Run this once for the target bucket. Replace <code>li9-s3-runtime</code> and <code>app-data</code> with your namespace and <code>S3Bucket</code> resource name.</p>
+      <pre><code>export NS=li9-s3-runtime
+export BUCKET_CR=app-data
+export BUCKET="$(oc -n "$NS" get s3bucket "$BUCKET_CR" -o jsonpath='{.status.bucketName}')"
+export SECRET="$(oc -n "$NS" get s3bucket "$BUCKET_CR" -o jsonpath='{.status.secretName}')"
+export ENDPOINT="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ENDPOINT_URL}' | base64 -d)"
+export AWS_ACCESS_KEY_ID="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)"
+export AWS_SECRET_ACCESS_KEY="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)"
+export AWS_REGION="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_REGION}' 2&gt;/dev/null | base64 -d || true)"
+export AWS_REGION="${AWS_REGION:-us-east-1}"
+export AWS_EC2_METADATA_DISABLED=true
+li9s3() {
+  aws --endpoint-url "$ENDPOINT" --region "$AWS_REGION" --no-verify-ssl s3api "$@"
+}</code></pre>
+      <p>To verify the setup, run:</p>
+      <pre><code>li9s3 head-bucket --bucket "$BUCKET"
+li9s3 list-objects-v2 --bucket "$BUCKET" --max-keys 1</code></pre>
+
+      </details>
+
+      <h2 id="versioning-and-delete-markers">Versioning And Delete Markers</h2>
+      <p>Versioning is configured with the standard S3 API and is required for Object Lock buckets. Li9 S3 stores generated version IDs, delete markers, explicit version reads, version listing, explicit version deletes, and per-version tags in the metadata plane. Delete markers hide the current key without deleting protected historical versions.</p>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-s3-versioning-delete-markers-flow.png" alt="Versioning and delete-marker flow. Versioned buckets keep object history; deletes create markers instead of immediately removing prior object versions." loading="lazy">
+        <figcaption>Use versioning when applications need recoverable object history, object lock prerequisites, or delete-marker semantics.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Operation</th><th>Behavior</th><th>Important Check</th></tr></thead>
+        <tbody>
+          <tr><td>Put object</td><td>Returns a version ID when versioning is enabled.</td><td>Capture <code>VersionId</code> for rollback or retention tests.</td></tr>
+          <tr><td>Delete without version ID</td><td>Creates a delete marker on enabled buckets.</td><td>List versions and confirm the previous object remains readable by version ID.</td></tr>
+          <tr><td>Delete explicit version</td><td>Requires version-specific delete authorization.</td><td>Denied members in batch delete return per-key errors.</td></tr>
+          <tr><td>Read explicit delete marker</td><td>Returns AWS-style <code>405 MethodNotAllowed</code> metadata for body reads.</td><td>Use explicit delete-marker removal to restore the previous latest object.</td></tr>
+        </tbody>
+      </table>
+      <pre><code>li9s3 put-bucket-versioning --bucket "$BUCKET" --versioning-configuration Status=Enabled
+printf 'v1\n' &gt; /tmp/versioned.txt
+V1="$(li9s3 put-object --bucket "$BUCKET" --key versioned/item.txt --body /tmp/versioned.txt --query VersionId --output text)"
+printf 'v2\n' &gt; /tmp/versioned.txt
+V2="$(li9s3 put-object --bucket "$BUCKET" --key versioned/item.txt --body /tmp/versioned.txt --query VersionId --output text)"
+li9s3 list-object-versions --bucket "$BUCKET" --prefix versioned/item.txt
+li9s3 get-object --bucket "$BUCKET" --key versioned/item.txt --version-id "$V1" /tmp/versioned-v1.txt
+li9s3 delete-object --bucket "$BUCKET" --key versioned/item.txt
+li9s3 list-object-versions --bucket "$BUCKET" --prefix versioned/item.txt
+cat /tmp/versioned-v1.txt</code></pre>
+
+      <h2>Suspended Buckets</h2>
+      <p>Suspended versioning uses S3-compatible <code>null</code> version behavior for the covered write, delete, and list paths. Do not use suspension as a retention control; use Object Lock when immutability is required and lifecycle rules when cleanup is required.</p>
+
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

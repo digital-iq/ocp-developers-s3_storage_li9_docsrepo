@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Operations - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+      <nav>
+        <a href="index.html">Overview</a>
+        <a href="/runtime/">Runtime</a>
+        <a href="install.html">Install</a>
+        <a href="cr-examples.html">CR Examples</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a class="active" href="operations.html">Core operations</a>
+        <a class="sub" href="#performance">Performance</a>
+        <a class="sub" href="#observability">Metrics and logging</a>
+        <a class="sub" href="#maintenance">Node maintenance</a>
+        <a class="sub" href="#recovery">Recovery</a>
+        <a class="sub" href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Upgrade</h3>
+        <a href="upgrade.html">Upgrade paths</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a class="sub" href="/runtime/architecture.html">Architecture</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Operations</div>
+        <h1>Operate performance, observability, scaling, maintenance, and recovery.</h1>
+        <p class="lede">Operations documents define how the service behaves after deployment: how to measure throughput, detect degraded writes, expand capacity, drain nodes, recover data, and verify integrity under failure.</p>
+      </section>
+
+      <section id="performance">
+        <h2>Performance</h2>
+        <p>Measure S3 throughput and latency from outside the storage pods. Test small objects, large objects, multipart uploads, sustained writes, and degraded-mode writes.</p>
+        <pre><code>oc get s3storage -A
+oc get pods,pvc,svc,route -n &lt;serviceNamespace&gt;
+oc get --raw /apis/custom.metrics.k8s.io/v1beta1 2&gt;/dev/null | head</code></pre>
+        <div class="procedure">
+          <div class="procedure-item">
+            <div>
+              <h3>Establish baseline</h3>
+              <p>Run write, read, list, and multipart tests with the selected protection mode and production-like PVC classes.</p>
+            </div>
+          </div>
+          <div class="procedure-item">
+            <div>
+              <h3>Introduce failure</h3>
+              <p>Stop or isolate one storage node while an external client continues writing. Verify write continuity according to the selected durability mode.</p>
+            </div>
+          </div>
+          <div class="procedure-item">
+            <div>
+              <h3>Verify healing</h3>
+              <p>Restore the node, watch repair metrics, and compare object checksums after the system returns to healthy state.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="observability">
+        <h2>Metrics and logging</h2>
+        <table>
+          <thead>
+            <tr><th>Signal</th><th>Why it matters</th><th>Where to look</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Gateway latency and errors</td><td>Shows client-facing S3 health.</td><td>ServiceMonitor, dashboards, gateway logs.</td></tr>
+            <tr><td>Object commit failures</td><td>Shows data-plane durability problems.</td><td>object-service metrics and logs.</td></tr>
+            <tr><td>Metadata quorum and WAL errors</td><td>Shows whether committed state is safe.</td><td>metadata-service metrics and status.</td></tr>
+            <tr><td>Healing queue depth</td><td>Shows repair backlog after node or PVC failure.</td><td>healing-service metrics.</td></tr>
+            <tr><td>Audit outbox lag</td><td>Shows whether security events are being persisted.</td><td>audit-service and KMS outbox metrics.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="maintenance">
+        <h2>Node maintenance and scaling</h2>
+        <p>Before maintenance, check protection mode, failure-domain distribution, metadata quorum, and healing backlog. For RWO per-node PVC mode, storage and colocated metadata move together and are rolled one node at a time.</p>
+        <table>
+          <thead>
+            <tr><th>Change</th><th>Expected operator behavior</th><th>Admin check</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Increase PVC size in <code>S3Storage</code></td><td>Patch the affected PVCs, verify the requested size, then roll owning workloads where restart is required.</td><td><code>oc get pvc -n &lt;serviceNamespace&gt; -o wide</code></td></tr>
+            <tr><td>Change node label selector</td><td>Reconcile StatefulSet placement and expose status if not enough matching nodes exist.</td><td><code>oc describe s3storage &lt;name&gt;</code></td></tr>
+            <tr><td>Drain one storage node</td><td>Maintain writes when protection mode still has enough healthy shards or replicas; fail closed otherwise.</td><td>AWS CLI write loop plus metadata/data health conditions.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="recovery">
+        <h2>Data recovery</h2>
+        <p>Recovery starts from committed metadata. The system should repair missing or stale shards from manifests, reject split-brain writes, and expose status conditions that distinguish metadata, data, and gateway failures.</p>
+        <div class="callout warning">
+          If metadata quorum is unavailable, the service must fail closed. Accepting writes without consistent metadata creates invisible corruption risk.
+        </div>
+        <pre><code>aws --endpoint-url &lt;endpoint&gt; s3 cp ./large-object.bin s3://&lt;bucket&gt;/failure-test/large-object.bin
+oc delete pod -n &lt;serviceNamespace&gt; -l app.kubernetes.io/name=li9-s3-storage-node --field-selector spec.nodeName=&lt;node&gt;
+aws --endpoint-url &lt;endpoint&gt; s3 cp ./small-object.txt s3://&lt;bucket&gt;/failure-test/small-object.txt
+aws --endpoint-url &lt;endpoint&gt; s3api head-object --bucket &lt;bucket&gt; --key failure-test/small-object.txt</code></pre>
+      </section>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

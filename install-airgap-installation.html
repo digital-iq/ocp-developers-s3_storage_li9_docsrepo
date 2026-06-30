@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Private Registry And Airgap Installation - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub active" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Private Registry And Airgap</div>
+        <h1>Private Registry And Airgap: Installation.</h1>
+        <p class="lede">Run the production installation procedure with copy-paste commands and field references.</p>
+      </section>
+
+      <h2>Installation</h2>
+      <div class="procedure">
+        <div class="procedure-item"><div><h3>1. Create the release artifact list</h3><p>Use digest-pinned images and checksum-verified package files from the published release.</p></div></div>
+        <div class="procedure-item"><div><h3>2. Mirror container images</h3><p>Copy runtime, operator, bundle, catalog, documentation, and client utility images into the internal registry.</p></div></div>
+        <div class="procedure-item"><div><h3>3. Configure OpenShift image mirroring</h3><p>Create ImageDigestMirrorSet or ImageTagMirrorSet CRs when the cluster should rewrite pulls automatically.</p></div></div>
+        <div class="procedure-item"><div><h3>4. Create internal catalog source</h3><p>Publish the mirrored Li9 catalog through the cluster-wide OLM catalog namespace.</p></div></div>
+        <div class="procedure-item"><div><h3>5. Install from internal sources</h3><p>Use the mirrored catalog for OLM, internal chart repository for Helm, and internal package repositories for Linux/Windows.</p></div></div>
+        <div class="procedure-item"><div><h3>6. Verify internal-only operation</h3><p>Inspect image references, pull events, and package sources.</p></div></div>
+      </div>
+
+      <h3>1. Create Image And Artifact Lists</h3>
+      <p>Use the public Quay and GitHub release locations as the connected upstream source, then mirror the same release set into the internal registry and package repositories used by the disconnected environment.</p>
+      <p>The connected Helm source is the <a href="https://digital-iq.github.io/ocp-developers-s3_storage_li9_helmrepo/li9-s3-storage-1.1.0-alpha.15.tgz">Helm chart archive</a>. Replace <code>LI9_HELM_CHART_URL</code> with an internal mirror URL after the chart is copied into your disconnected artifact store.</p>
+      <pre><code>export LI9_OPERATOR_VERSION=1.1.0-alpha.40
+export LI9_RUNTIME_VERSION=1.1.0-alpha.15
+export LI9_CHART_VERSION=1.1.0-alpha.15
+export LI9_IMAGE_REPO=quay.io/li9/li9-operators
+: "${LI9_HELM_CHART_URL:?set to the Helm chart archive or internal mirror URL}"
+export LI9_HELM_CHART_SHA256=28664fbc774e79a7c227de80acbcfba2b91c5fe457e664d92a74e4e0c78f6043
+
+cat &gt; li9-s3-images.txt &lt;&lt;EOF
+${LI9_IMAGE_REPO}:li9-s3-catalog-v${LI9_OPERATOR_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-bundle-v${LI9_OPERATOR_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-manager-v${LI9_OPERATOR_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-operator-docs-v${LI9_OPERATOR_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-runtime-docs-v${LI9_RUNTIME_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-gateway-v${LI9_RUNTIME_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-control-api-v${LI9_RUNTIME_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-identity-service-v${LI9_RUNTIME_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-policy-service-v${LI9_RUNTIME_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-bucket-service-v${LI9_RUNTIME_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-metadata-service-v${LI9_RUNTIME_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-object-service-v${LI9_RUNTIME_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-kms-service-v${LI9_RUNTIME_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-storage-node-v${LI9_RUNTIME_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-healing-service-v${LI9_RUNTIME_VERSION}
+${LI9_IMAGE_REPO}:li9-s3-audit-service-v${LI9_RUNTIME_VERSION}
+public.ecr.aws/aws-cli/aws-cli:latest
+EOF
+
+while read -r image; do
+  oc image info "${image}" --filter-by-os=linux/amd64
+done &lt; li9-s3-images.txt
+
+curl -fL "${LI9_HELM_CHART_URL}" -o "li9-s3-storage-${LI9_CHART_VERSION}.tgz"
+printf '%s  %s\n' "${LI9_HELM_CHART_SHA256}" "li9-s3-storage-${LI9_CHART_VERSION}.tgz" | sha256sum -c -</code></pre>
+
+      <h3>2. Mirror Images</h3>
+      <pre><code>export TARGET_REGISTRY="registry.li9.internal/li9"
+export TARGET_IMAGE_REPO="${TARGET_REGISTRY}/li9-operators"
+export TARGET_AWS_CLI_REPO="${TARGET_REGISTRY}/aws-cli"
+
+while read -r image; do
+  tag="${image##*:}"
+  if [ "${image}" = "public.ecr.aws/aws-cli/aws-cli:latest" ]; then
+    target="${TARGET_AWS_CLI_REPO}:latest"
+  else
+    target="${TARGET_IMAGE_REPO}:${tag}"
+  fi
+  skopeo copy --all \
+    "docker://${image}" \
+    "docker://${target}"
+done &lt; li9-s3-images.txt</code></pre>
+
+      <h3>3. Create OpenShift Mirror CRs</h3>
+      <pre><code>cat &lt;&lt;EOF | envsubst | oc apply -f -
+apiVersion: config.openshift.io/v1
+kind: ImageDigestMirrorSet
+metadata:
+  name: li9-s3-digest-mirrors
+spec:
+  imageDigestMirrors:
+    - source: quay.io/li9/li9-operators
+      mirrors:
+        - ${TARGET_IMAGE_REPO}
+---
+apiVersion: config.openshift.io/v1
+kind: ImageTagMirrorSet
+metadata:
+  name: li9-s3-tag-mirrors
+spec:
+  imageTagMirrors:
+    - source: quay.io/li9/li9-operators
+      mirrors:
+        - ${TARGET_IMAGE_REPO}
+EOF
+oc get imagedigestmirrorset,imagetagmirrorset | grep li9-s3</code></pre>
+
+      <h3>Mirror CR Properties</h3>
+      <table>
+        <thead><tr><th>CR</th><th>Property</th><th>Description</th><th>Allowed Or Recommended Values</th></tr></thead>
+        <tbody>
+          <tr><td><code>ImageDigestMirrorSet</code></td><td><code>metadata.name</code></td><td>Cluster-scoped mirror rule name.</td><td>Stable name such as <code>li9-s3-digest-mirrors</code>.</td></tr>
+          <tr><td><code>ImageDigestMirrorSet</code></td><td><code>spec.imageDigestMirrors[].source</code></td><td>Original source registry/repository for digest pulls.</td><td><code>quay.io/li9/li9-operators</code>.</td></tr>
+          <tr><td><code>ImageDigestMirrorSet</code></td><td><code>spec.imageDigestMirrors[].mirrors[]</code></td><td>Internal mirror locations.</td><td>Internal registry repository reachable by cluster nodes.</td></tr>
+          <tr><td><code>ImageTagMirrorSet</code></td><td><code>metadata.name</code></td><td>Cluster-scoped mirror rule name.</td><td>Stable name such as <code>li9-s3-tag-mirrors</code>.</td></tr>
+          <tr><td><code>ImageTagMirrorSet</code></td><td><code>spec.imageTagMirrors[].source</code></td><td>Original source registry/repository for tag pulls.</td><td><code>quay.io/li9/li9-operators</code>. Prefer digest pulls for releases.</td></tr>
+          <tr><td><code>ImageTagMirrorSet</code></td><td><code>spec.imageTagMirrors[].mirrors[]</code></td><td>Internal mirror locations.</td><td>Internal registry repository reachable by cluster nodes.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4. Create Internal CatalogSource</h3>
+      <pre><code>cat &lt;&lt;EOF | envsubst | oc apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: li9-operators
+  namespace: openshift-marketplace
+spec:
+  sourceType: grpc
+  image: ${TARGET_IMAGE_REPO}:li9-s3-catalog-v${LI9_OPERATOR_VERSION}
+  displayName: Li9 Operators
+  publisher: Li9
+EOF
+oc wait pod -n openshift-marketplace -l olm.catalogSource=li9-operators --for=condition=Ready --timeout=5m</code></pre>
+
+      <h3>CatalogSource Properties</h3>
+      <table>
+        <thead><tr><th>Property</th><th>Description</th><th>Allowed Or Recommended Values</th></tr></thead>
+        <tbody>
+          <tr><td><code>metadata.name</code></td><td>CatalogSource name referenced by Li9 operator Subscriptions.</td><td><code>li9-operators</code>. Keep this S3-neutral because the catalog can publish multiple Li9 operators.</td></tr>
+          <tr><td><code>metadata.namespace</code></td><td>Namespace where OLM reads the catalog.</td><td><code>openshift-marketplace</code>.</td></tr>
+          <tr><td><code>spec.sourceType</code></td><td>Catalog protocol.</td><td><code>grpc</code>.</td></tr>
+          <tr><td><code>spec.image</code></td><td>Internal Li9 multi-operator catalog image.</td><td>Internal registry image only in disconnected clusters.</td></tr>
+          <tr><td><code>spec.displayName</code></td><td>OperatorHub display name.</td><td><code>Li9 Operators</code>.</td></tr>
+          <tr><td><code>spec.publisher</code></td><td>Vendor display name.</td><td><code>Li9</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5. Install From Internal Sources</h3>
+      <table>
+        <thead><tr><th>Install Type</th><th>Internal Source</th><th>Next Step</th></tr></thead>
+        <tbody>
+          <tr><td>OpenShift Operator</td><td>Internal CatalogSource.</td><td>Continue with <a href="install-openshift.html">OpenShift Operator Installation</a> and use <code>source: li9-operators</code>.</td></tr>
+          <tr><td>Helm Chart</td><td>Internal Helm repository or OCI chart artifact.</td><td>Continue with <a href="install-helm.html">Helm Installation</a> and set <code>images.repository</code> to the internal registry.</td></tr>
+          <tr><td>Linux Packages</td><td>Internal RPM or DEB repository.</td><td>Continue with <a href="install-linux.html">Linux Packages</a> after repository config.</td></tr>
+          <tr><td>Windows Packages</td><td>Internal file share or software distribution system.</td><td>Continue with <a href="install-windows.html">Windows Packages</a> after artifact copy and checksum validation.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>6. Verify Internal-Only Operation</h3>
+      <pre><code>oc get pods -A -l app.kubernetes.io/part-of=li9-s3 -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{" "}{range .spec.containers[*]}{.image}{" "}{end}{"\n"}{end}'
+oc get events -A --field-selector type=Warning | grep -E 'li9-s3|ImagePull|ErrImagePull|BackOff' || true
+oc get catalogsource -n openshift-marketplace li9-operators -o yaml | grep "${TARGET_IMAGE_REPO}"
+helm repo list | grep li9-s3
+dnf repolist 2&gt;/dev/null | grep li9-s3 || true
+apt-cache policy li9-s3-storage 2&gt;/dev/null || true</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

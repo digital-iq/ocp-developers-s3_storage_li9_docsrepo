@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Node Placement - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / Platform</div>
+        <h1>Node placement and failure-domain selection.</h1>
+        <p class="lede">Placement decides which nodes may run Li9 S3 data and metadata components, while failure domains decide how protected data is spread. Use labels for intent and tolerations only when nodes are intentionally tainted for storage workloads.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-platform.html">All platform reference pages</a></p>
+
+      <h2 id="concepts">Concepts</h2>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-platform-node-placement-flow.png" alt="Node placement flow. Node selectors, labels, tolerations, and failure-domain labels decide where data and metadata components run." loading="lazy">
+        <figcaption>Use placement controls to isolate Li9 S3 onto selected nodes and align protection with failure domains.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Concept</th><th>Meaning</th><th>Applies To</th></tr></thead>
+        <tbody>
+          <tr><td>Node selector</td><td>Limits storage or metadata pods to nodes with required labels.</td><td>OpenShift Operator and Helm.</td></tr>
+          <tr><td>Toleration</td><td>Allows placement onto nodes tainted for Li9 S3. It does not reserve nodes by itself.</td><td>OpenShift Operator and Helm.</td></tr>
+          <tr><td>Failure domain</td><td>Label value used to avoid placing all protected copies or shards in one node, rack, zone, or datacenter.</td><td>Distributed data and metadata placement.</td></tr>
+          <tr><td>Host identity</td><td>Durable node ID in native package installs.</td><td>Linux and Windows.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="openshift-labels">OpenShift Labels</h2>
+      <pre><code>oc label node worker-1 storage.li9.com/s3-node=true
+oc label node worker-2 storage.li9.com/s3-node=true
+oc label node worker-3 storage.li9.com/s3-node=true
+oc label node worker-1 topology.li9.com/failure-domain=rack-a
+oc label node worker-2 topology.li9.com/failure-domain=rack-b
+oc label node worker-3 topology.li9.com/failure-domain=rack-c
+oc get nodes -l storage.li9.com/s3-node=true --show-labels</code></pre>
+
+      <h2 id="taints">Taints And Tolerations</h2>
+      <p>A taint such as <code>dedicated=li9-s3:NoSchedule</code> prevents ordinary pods from scheduling unless they have a matching toleration. It does not prevent privileged admins from scheduling other workloads that also tolerate the taint. Treat taints as scheduling policy, not a security boundary.</p>
+      <pre><code>oc adm taint node worker-1 dedicated=li9-s3:NoSchedule
+oc adm taint node worker-2 dedicated=li9-s3:NoSchedule
+oc adm taint node worker-3 dedicated=li9-s3:NoSchedule
+oc describe node worker-1 | grep -A3 Taints</code></pre>
+
+      <h2 id="configuration-surfaces">Configuration Surfaces</h2>
+      <table>
+        <thead><tr><th>Mode</th><th>Where Placement Is Configured</th><th>Verification</th></tr></thead>
+        <tbody>
+          <tr><td>OpenShift Operator</td><td><code>S3Storage.spec.storage.data.placement</code>, metadata placement, node selectors, tolerations, and failure-domain labels.</td><td><code>oc -n li9-s3-runtime get pods -o wide</code> and <code>oc get s3storage li9-s3 -o yaml</code>.</td></tr>
+          <tr><td>Helm</td><td>Chart values for node selectors, affinity, tolerations, topology spread, and storage-node counts.</td><td><code>helm get values</code> and rendered pod specs.</td></tr>
+          <tr><td>Linux</td><td>Cluster node list in host config; failure domains are node/rack/zone labels in the Li9 S3 config.</td><td><code>li9-s3ctl cluster members</code>.</td></tr>
+          <tr><td>Windows</td><td>Cluster node list in host config; failure domains are node/rack/zone labels in the Li9 S3 config.</td><td><code>li9-s3ctl.exe cluster members</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="validation">Validation</h2>
+      <pre><code>oc -n li9-s3-runtime get pods -l app.kubernetes.io/part-of=li9-s3 -o wide
+oc -n li9-s3-runtime get s3storage li9-s3 -o jsonpath='{.status.conditions}' | python3 -m json.tool
+oc -n li9-s3-runtime get events --sort-by=.lastTimestamp | tail -40</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

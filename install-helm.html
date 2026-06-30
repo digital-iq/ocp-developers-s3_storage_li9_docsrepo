@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Helm Chart Installation - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title active" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Helm Chart</div>
+        <h1>Helm Chart installation guide.</h1>
+        <p class="lede">Use Helm when OLM is not the lifecycle owner and chart values should directly manage runtime Kubernetes resources.</p>
+      </section>
+
+      <section class="section-band">
+        <h2>Installation Workflow</h2>
+        <div class="grid">
+          <div class="panel">
+            <h3>Prerequisites</h3>
+            <p>Prepare access, artifacts, storage, network, security, and disconnected sources before installing.</p>
+            <p><a class="button" href="install-helm-prerequisites.html">Open Prerequisites</a></p>
+          </div>
+          <div class="panel">
+            <h3>Installation</h3>
+            <p>Run the production installation procedure with copy-paste commands and field references.</p>
+            <p><a class="button" href="install-helm-installation.html">Open Installation</a></p>
+          </div>
+          <div class="panel">
+            <h3>Upgrade</h3>
+            <p>Upgrade safely with pre-checks, risk controls, rollout verification, and rollback awareness.</p>
+            <p><a class="button" href="install-helm-upgrade.html">Open Upgrade</a></p>
+          </div>
+          <div class="panel">
+            <h3>Uninstall</h3>
+            <p>Remove the installation in dependency order and verify that managed resources are gone.</p>
+            <p><a class="button" href="install-helm-uninstall.html">Open Uninstall</a></p>
+          </div>
+        </div>
+      </section>
+
+      <h2>How To Use This Guide</h2>
+      <p>Work through the pages in order for a new installation. For an existing installation, use the upgrade or uninstall page directly, but still review prerequisites before changing production systems.</p>
+      <table>
+        <thead><tr><th>Page</th><th>Use It For</th></tr></thead>
+        <tbody>
+          <tr><td><a href="install-helm-prerequisites.html">Prerequisites</a></td><td>Prepare access, artifacts, storage, network, security, and disconnected sources before installing.</td></tr>
+          <tr><td><a href="install-helm-installation.html">Installation</a></td><td>Run the production installation procedure with copy-paste commands and field references.</td></tr>
+          <tr><td><a href="install-helm-upgrade.html">Upgrade</a></td><td>Upgrade safely with pre-checks, risk controls, rollout verification, and rollback awareness.</td></tr>
+          <tr><td><a href="install-helm-uninstall.html">Uninstall</a></td><td>Remove the installation in dependency order and verify that managed resources are gone.</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

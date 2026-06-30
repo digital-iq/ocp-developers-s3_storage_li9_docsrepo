@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Observability - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / Runtime</div>
+        <h1>Observability for Li9 S3 runtime and control planes.</h1>
+        <p class="lede">Li9 S3 exposes runtime metrics, request/audit signals, health status, and optional platform-native dashboards. The signals are common, but collection is configured differently on OpenShift Operator, Helm, Linux, and Windows installs.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-platform.html">All platform reference pages</a></p>
+
+      <h2 id="scope">What This Covers</h2>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-platform-observability-flow.png" alt="Observability signal flow. Runtime and operator signals become Prometheus metrics, dashboards, alerts, and troubleshooting evidence." loading="lazy">
+        <figcaption>Use observability when validating performance, backlog, errors, and health across runtime and control-plane components.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Signal Group</th><th>Why It Matters</th><th>Primary Consumers</th></tr></thead>
+        <tbody>
+          <tr><td>Gateway latency and errors</td><td>Client-visible S3 health, AWS CLI compatibility, timeout behavior, and authorization failures.</td><td>Platform SREs, application owners.</td></tr>
+          <tr><td>Object commit and storage-node health</td><td>Whether writes are reaching the configured protection level and whether any node is degrading write durability.</td><td>Storage operators.</td></tr>
+          <tr><td>Metadata quorum and WAL lag</td><td>Whether the metadata service can safely accept writes and recover after restart.</td><td>Storage operators.</td></tr>
+          <tr><td>Audit, KMS, replication, lifecycle, and healing outboxes</td><td>Whether asynchronous work is progressing or backing up.</td><td>SREs and security teams.</td></tr>
+          <tr><td>Control-plane reconcile health</td><td>Whether the selected platform owner is applying desired state and reporting meaningful status.</td><td>Platform administrators.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="platform-setup">Platform Setup</h2>
+      <table>
+        <thead><tr><th>Mode</th><th>How To Enable</th><th>How To Check</th></tr></thead>
+        <tbody>
+          <tr><td>OpenShift Operator</td><td>Enable observability in <code>S3Storage</code> or companion observability CR. The operator creates ServiceMonitors, PrometheusRules, and dashboard ConfigMaps where configured.</td><td><code>oc -n li9-s3-runtime get servicemonitor,prometheusrule,configmap -l app.kubernetes.io/part-of=li9-s3</code></td></tr>
+          <tr><td>Helm</td><td>Set chart values for metrics, ServiceMonitor, PrometheusRule, and dashboard output. Helm owns the rendered monitoring resources.</td><td><code>helm get values li9-s3 -n li9-s3-helm --all</code> and <code>kubectl get servicemonitor,prometheusrule</code>.</td></tr>
+          <tr><td>Linux</td><td>Expose metrics listeners from service config and scrape them with Prometheus, Grafana Agent, OpenTelemetry Collector, or an internal monitoring agent.</td><td>Use <code>curl</code> against the local metrics endpoint and <code>journalctl -u 'li9-s3*'</code>.</td></tr>
+          <tr><td>Windows</td><td>Expose metrics listeners from service config and collect logs from Windows Event Log or product log files.</td><td>Use <code>Invoke-WebRequest</code> against the local metrics endpoint and <code>Get-EventLog</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="openshift-checks">OpenShift Checks</h2>
+      <pre><code>oc -n li9-s3-runtime get servicemonitor li9-s3-runtime li9-s3-operator-http
+oc -n li9-s3-runtime get prometheusrule li9-s3-alerts
+oc -n li9-s3-runtime get configmap li9-s3-grafana-dashboard
+oc -n li9-s3-runtime get service -l monitoring.li9.com/scheme=https
+oc -n li9-s3-runtime get s3storage li9-s3 -o jsonpath='{.status.conditions}' | python3 -m json.tool</code></pre>
+
+      <h2 id="dashboard-use">What A Useful Dashboard Should Show</h2>
+      <ul>
+        <li>Request rate, p50/p95/p99 latency, and 4xx/5xx split by S3 operation.</li>
+        <li>Write commit failures, shard write duration, storage-node availability, and degraded-mode state.</li>
+        <li>Metadata leader, quorum state, WAL fsync latency, snapshot age, and apply lag.</li>
+        <li>Lifecycle, replication, inventory, archive restore, and healing backlog age.</li>
+        <li>KMS and audit outbox retries, dead-letter counts, and delivery latency.</li>
+      </ul>
+
+      <h2 id="failure-signals">Failure Signals</h2>
+      <table>
+        <thead><tr><th>Symptom</th><th>Likely Meaning</th><th>Next Check</th></tr></thead>
+        <tbody>
+          <tr><td>Gateway 5xx increases while metadata quorum is lost</td><td>Writes are failing closed to avoid split-brain or unsafe metadata commits.</td><td>Metadata service logs, quorum metric, PVC health.</td></tr>
+          <tr><td>Healing backlog grows after a node outage</td><td>Object data repair is pending or storage nodes are still degraded.</td><td>Storage-node metrics and healing-service run history.</td></tr>
+          <tr><td>KMS outbox retries grow</td><td>Encryption audit or external key wrapping path is unavailable.</td><td>KMS service logs, TLS credentials, provider endpoint.</td></tr>
+          <tr><td>Operator reconcile errors persist</td><td>The desired CR state cannot be applied to Kubernetes resources.</td><td>Operator logs and CR status conditions.</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

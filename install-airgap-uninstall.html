@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Private Registry And Airgap Uninstall - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub active" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Private Registry And Airgap</div>
+        <h1>Private Registry And Airgap: Uninstall.</h1>
+        <p class="lede">Remove the installation in dependency order and verify that managed resources are gone.</p>
+      </section>
+
+      <h2>Uninstall Checklist</h2>
+      <p>Remove Li9 S3 from each target installation first. Remove mirror rules, catalog sources, internal registry artifacts, package repositories, and trust bundles only after no remaining cluster or host depends on that release.</p>
+      <div class="callout warning">
+        Do not delete internal mirrored images or package repositories until all clusters and hosts using that release have been upgraded or removed.
+      </div>
+      <table>
+        <thead><tr><th>Step</th><th>Purpose</th><th>Expected Result</th></tr></thead>
+        <tbody>
+          <tr><td>Inventory consumers</td><td>Find clusters, Helm installs, Linux hosts, and Windows hosts still pulling from the internal mirror.</td><td>No active consumer points at the release being removed.</td></tr>
+          <tr><td>Uninstall product</td><td>Use the installation-specific uninstall page first.</td><td>No Li9 S3 runtime workload depends on mirrored images.</td></tr>
+          <tr><td>Remove cluster mirror config</td><td>Delete OpenShift mirror and catalog objects when they are no longer shared.</td><td>Catalog and IDMS/ITMS objects are gone or intentionally retained for other Li9 operators.</td></tr>
+          <tr><td>Clean internal artifacts</td><td>Remove image, chart, RPM/DEB, and MSI/ZIP artifacts only from retired release channels.</td><td>Internal registry and package repository state matches the approved retention policy.</td></tr>
+        </tbody>
+      </table>
+      <pre><code># Remove Li9 S3 install through its install-specific page first.
+# Then remove airgap-only OpenShift mirror configuration if no remaining Li9 operator uses it:
+oc delete catalogsource -n openshift-marketplace li9-operators
+oc delete imagedigestmirrorset li9-s3-digest-mirrors
+oc delete imagetagmirrorset li9-s3-tag-mirrors
+
+# Verify no Li9 S3 pods still depend on internal images:
+oc get pods -A -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{" "}{range .spec.containers[*]}{.image}{" "}{end}{"\n"}{end}' | grep li9-s3 || true
+oc get events -A --field-selector type=Warning | grep -E 'li9-s3|ImagePull|ErrImagePull|BackOff' || true</code></pre>
+
+      <h2>Verification</h2>
+      <p>A clean airgap uninstall has no Li9 S3 consumers and no broken catalog or image-pull events. Keep shared <code>li9-operators</code> catalog infrastructure when it also serves other Li9 products.</p>
+      <pre><code>oc get catalogsource -n openshift-marketplace li9-operators || true
+oc get imagedigestmirrorset,imagetagmirrorset | grep li9-s3 || true
+oc get pods -A | grep li9-s3 || true</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

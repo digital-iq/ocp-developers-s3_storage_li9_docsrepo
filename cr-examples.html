@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CR Examples - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+      <nav>
+        <a href="index.html">Overview</a>
+        <a href="/runtime/">Runtime</a>
+        <a href="install.html">Install</a>
+        <a href="cr-examples.html">CR Examples</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </nav>
+    </div>
+  </header>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+        <a class="sub" href="administration.html#buckets">Buckets and access</a>
+        <a class="sub" href="administration.html#security">Security and encryption</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a class="sub" href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a class="active" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="#full-distributed-storage-with-erasure-coding">Distributed EC</a>
+        <a class="sub" href="#single-node-replicated-storage">Single-node replication</a>
+        <a class="sub" href="#bucket-and-access-secret">Bucket access</a>
+        <a class="sub" href="#bucket-policy">Bucket policy</a>
+        <a class="sub" href="#lifecycle-archive-and-replication">Lifecycle policy and restore</a>
+        <a class="sub" href="#documentation-site">Documentation site</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Runtime</h3>
+        <a href="/runtime/index.html">Overview</a>
+        <a class="sub" href="/runtime/usage.html">Usage</a>
+        <a class="sub" href="/runtime/services.html">Services</a>
+        <a class="sub" href="/runtime/architecture.html">Architecture</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference</div>
+        <h1>Custom Resource Examples</h1>
+        <p class="lede">These examples show the operator-facing API shape for storage, bucket consumption, access control, data management, replication, and documentation exposure. Tune storage classes, node placement, image pull secrets, and route hosts for each cluster.</p>
+      </section>
+
+    <div class="callout">
+      Apply examples in order: create <code>S3Storage</code>, wait for Ready, create <code>S3Bucket</code>, then attach access, policy, lifecycle, archive, or replication CRs as needed.
+    </div>
+
+    <h2 id="full-distributed-storage-with-erasure-coding">Full Distributed Storage With Erasure Coding</h2>
+    <pre><code>apiVersion: storage.li9.com/v1alpha1
+kind: S3Storage
+metadata:
+  name: prod-s3
+  namespace: li9-s3
+spec:
+  deletionPolicy: Retain
+  region:
+    default: li9-mgm01
+    allowed:
+      - li9-mgm01
+      - us-east-1
+  deployment:
+    mode: FullDistributed
+  exposure:
+    route:
+      enabled: false
+  console:
+    enabled: true
+    rbacNamespace: app-team
+    route:
+      enabled: true
+  storage:
+    data:
+      protection:
+        type: ErasureCoding
+        erasureCoding:
+          dataShards: 2
+          parityShards: 2
+      placement:
+        layout: PerNodePVC
+        nodes: 4
+        failureDomain:
+          type: Node
+      pvc:
+        size: 100Gi
+        storageClassName: ocs-storagecluster-ceph-rbd
+    metadata:
+      placement:
+        type: ColocatedWithData
+    archive:
+      enabled: true
+      pvc:
+        size: 100Gi
+        storageClassName: ocs-storagecluster-cephfs
+  integrations:
+    obc: true
+    cosi: true</code></pre>
+
+    <h2 id="single-node-replicated-storage">Single-Node Replicated Storage</h2>
+    <pre><code>apiVersion: storage.li9.com/v1alpha1
+kind: S3Storage
+metadata:
+  name: single-node-s3
+  namespace: li9-s3
+spec:
+  deployment:
+    mode: FullDistributed
+  region:
+    default: li9-mgm01
+    allowed:
+      - li9-mgm01
+  storage:
+    data:
+      protection:
+        type: Replication
+        replication:
+          replicas: 1
+      placement:
+        layout: PerNodePVC
+        nodes: 1
+      pvc:
+        size: 20Gi
+        storageClassName: ocs-storagecluster-ceph-rbd
+    metadata:
+      placement:
+        type: ColocatedWithData</code></pre>
+
+    <h2 id="dedicated-metadata-pvc">Dedicated Metadata PVC</h2>
+    <pre><code>apiVersion: storage.li9.com/v1alpha1
+kind: S3Storage
+metadata:
+  name: prod-s3-dedicated-metadata
+  namespace: li9-s3
+spec:
+  deletionPolicy: Retain
+  region:
+    default: li9-mgm01
+    allowed:
+      - li9-mgm01
+      - us-east-1
+  deployment:
+    mode: FullDistributed
+  storage:
+    data:
+      protection:
+        type: ErasureCoding
+        erasureCoding:
+          dataShards: 2
+          parityShards: 2
+      placement:
+        layout: PerNodePVC
+        nodes: 4
+        failureDomain:
+          type: Node
+      pvc:
+        size: 100Gi
+        storageClassName: ocs-storagecluster-ceph-rbd
+    metadata:
+      placement:
+        type: DedicatedPVC
+      pvc:
+        size: 10Gi
+        storageClassName: ocs-storagecluster-ceph-rbd</code></pre>
+
+    <h2 id="bucket-and-access-secret">Bucket And Access Secret</h2>
+    <pre><code>apiVersion: storage.li9.com/v1alpha1
+kind: S3Bucket
+metadata:
+  name: app-data
+  namespace: app-team
+spec:
+  bucketName: app-data
+  region: li9-mgm01
+  storageRef:
+    name: prod-s3
+    namespace: li9-s3
+---
+apiVersion: storage.li9.com/v1alpha1
+kind: S3BucketAccess
+metadata:
+  name: app-data-writer
+  namespace: app-team
+spec:
+  s3BucketRef: app-data
+  secretName: app-data-writer
+  access:
+    effect: Allow
+    actions:
+      - s3:GetObject
+      - s3:PutObject
+      - s3:ListBucket
+    resources:
+      - bucket
+      - objects
+    prefixes:
+      - uploads/</code></pre>
+
+    <h2 id="bucket-policy">Bucket Policy</h2>
+    <pre><code>apiVersion: storage.li9.com/v1alpha1
+kind: S3BucketPolicy
+metadata:
+  name: app-data-policy
+  namespace: app-team
+spec:
+  s3BucketRef: app-data
+  policy:
+    Version: "2012-10-17"
+    Statement:
+      - Sid: AllowApplicationPrefix
+        Effect: Allow
+        Principal:
+          AWS: "*"
+        Action:
+          - s3:GetObject
+          - s3:PutObject
+        Resource:
+          - arn:aws:s3:::app-data/uploads/*
+          - arn:aws:s3:::app-data</code></pre>
+
+    <h2 id="lifecycle-archive-and-replication">Lifecycle, Archive, And Replication</h2>
+    <pre><code>apiVersion: storage.li9.com/v1alpha1
+kind: S3BucketLifecycle
+metadata:
+  name: app-data-lifecycle
+  namespace: app-team
+spec:
+  s3BucketRef: app-data
+  document: |
+    &lt;LifecycleConfiguration&gt;
+      &lt;Rule&gt;
+        &lt;ID&gt;expire-temp-uploads&lt;/ID&gt;
+        &lt;Status&gt;Enabled&lt;/Status&gt;
+        &lt;Filter&gt;
+          &lt;Prefix&gt;tmp/&lt;/Prefix&gt;
+        &lt;/Filter&gt;
+        &lt;Expiration&gt;
+          &lt;Days&gt;7&lt;/Days&gt;
+        &lt;/Expiration&gt;
+      &lt;/Rule&gt;
+    &lt;/LifecycleConfiguration&gt;
+---
+apiVersion: storage.li9.com/v1alpha1
+kind: S3ArchivePolicy
+metadata:
+  name: app-data-archive
+  namespace: app-team
+spec:
+  s3BucketRef: app-data
+  storageClass: DEEP_ARCHIVE
+  prefixes:
+    - reports/
+  transitionAfterDays: 30
+  expireAfterDays: 365
+---
+apiVersion: storage.li9.com/v1alpha1
+kind: S3ReplicationTarget
+metadata:
+  name: remote-dr
+  namespace: app-team
+spec:
+  endpoint: REMOTE_S3_ENDPOINT
+  region: li9-dr-1
+  addressingStyle: PathStyle
+  credentialsSecretRef:
+    name: remote-dr-s3-credentials
+---
+apiVersion: storage.li9.com/v1alpha1
+kind: S3BucketReplication
+metadata:
+  name: app-data-replication
+  namespace: app-team
+spec:
+  s3BucketRef: app-data
+  rules:
+    - id: replicate-critical-prefix
+      prefix: critical/
+      destination:
+        type: Local
+        bucketName: app-data-copy
+    - id: replicate-audit-to-dr
+      prefix: audit/
+      destination:
+        type: Global
+        bucketName: app-data-dr
+        globalTargetRef:
+          name: remote-dr</code></pre>
+    <p class="callout">Use product terms such as archive and deep archive in documentation and UI. Values such as <code>DEEP_ARCHIVE</code> are S3 API storage-class values kept for AWS CLI and SDK compatibility.</p>
+
+    <h2 id="documentation-site">Documentation Site</h2>
+    <pre><code>apiVersion: storage.li9.com/v1alpha1
+kind: S3Documentation
+metadata:
+  name: li9-s3-docs
+  namespace: li9-poc4
+spec:
+  replicas: 1
+  exposure:
+    route:
+      enabled: true
+      tls: true
+      host: ""
+  docs:
+    runtime:
+      title: Runtime Documentation
+    operator:
+      title: Operator Documentation</code></pre>
+    </article>
+  </main>
+  <script src="assets/site.js"></script>
+  <footer>Li9 S3 unified documentation site</footer>
+</body>
+</html>

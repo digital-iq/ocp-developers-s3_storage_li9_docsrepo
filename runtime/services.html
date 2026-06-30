@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Runtime Services - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Storage Runtime</div>
+      <nav>
+        <a href="/">Docs Home</a>
+        <a href="index.html">Overview</a>
+        <a href="usage.html">Usage</a>
+        <a href="services.html">Services</a>
+        <a href="architecture.html">Architecture</a>
+      </nav>
+    </div>
+  </header>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="/">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="/install.html">Overview</a>
+        <a href="/install-openshift.html">OpenShift Operator</a>
+        <a href="/install-helm.html">Helm Chart</a>
+        <a href="/install-linux.html">Linux Packages</a>
+        <a href="/install-windows.html">Windows Packages</a>
+        <a href="/install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="/administration.html">Overview</a>
+        <a class="sub" href="/administration.html#buckets">Buckets and access</a>
+        <a class="sub" href="/administration.html#security">Security and encryption</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="/operations.html">Core operations</a>
+        <a class="sub" href="/troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="/reference.html">Reference index</a>
+        <a class="sub" href="/cr-examples.html">CR examples</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Runtime</h3>
+        <a href="index.html">Overview</a>
+        <a href="usage.html">Usage</a>
+        <a href="services.html">Services</a>
+        <a href="architecture.html">Architecture</a>
+      </div>
+    </aside>
+    <article class="docs-content">
+    <div class="intro">
+      <div class="eyebrow">Runtime service catalog</div>
+      <h1>Service responsibilities, boundaries, and operating signals.</h1>
+      <p class="lede">Each service has a narrow owner and a clear failure boundary. Use this page to understand what a service is for, when to enable the feature it supports, when not to use it, and which signals matter during production operation.</p>
+    </div>
+
+    <section class="section-band">
+      <h2>Service Index</h2>
+      <div class="service-index">
+        <div class="head">Service</div><div class="head">Primary responsibility</div><div class="head">Used by</div>
+        <div><a href="#s3-gateway">s3-gateway</a></div><div>S3 API edge, SigV4, client response semantics, request routing.</div><div>AWS CLI, SDKs, app pods</div>
+        <div><a href="#control-api">control-api</a></div><div>Internal provisioning API for operator and platform workflows.</div><div>Operator, OBC/COSI, automation</div>
+        <div><a href="#identity-service">identity-service</a></div><div>Access keys, subjects, session tokens, credential lifecycle.</div><div>Gateway, operator, bucket access</div>
+        <div><a href="#policy-service">policy-service</a></div><div>AWS-style bucket policy evaluation and deny/allow decisions.</div><div>Gateway, bucket policy CRs</div>
+        <div><a href="#bucket-service">bucket-service</a></div><div>Bucket catalog, bucket-level features, lifecycle configuration.</div><div>S3 APIs, CR reconcilers</div>
+        <div><a href="#metadata-service">metadata-service</a></div><div>Durable bucket/object metadata, versions, manifests, listings.</div><div>Gateway, object service, healing</div>
+        <div><a href="#object-service">object-service</a></div><div>Object semantics, multipart assembly, erasure coding, replication.</div><div>Gateway, healing, archive</div>
+        <div><a href="#storage-node">storage-node</a></div><div>Shard persistence on PVCs or native paths.</div><div>Object service, healing</div>
+        <div><a href="#kms-service">kms-service</a></div><div>Local KMS-style server-side encryption and key operations.</div><div>Gateway, object service</div>
+        <div><a href="#healing-service">healing-service</a></div><div>Repair, lifecycle, archive, restore, replication, cleanup.</div><div>Metadata, object service, storage nodes</div>
+        <div><a href="#audit-service">audit-service</a></div><div>Security, access, and KMS-relevant audit event persistence.</div><div>Gateway, KMS, operators</div>
+      </div>
+    </section>
+
+    <section class="service-group">
+      <h2>API and Provisioning</h2>
+      <div class="service-grid">
+        <article class="service" id="s3-gateway">
+          <div>
+            <div class="eyebrow">s3-gateway</div>
+            <h3>S3 entry point</h3>
+          </div>
+          <dl>
+            <div><dt>Business value</dt><dd>Gives teams one S3-compatible endpoint for AWS CLI, SDKs, backup tools, logging stacks, and application pods.</dd></div>
+            <div><dt>Use when</dt><dd>Workloads need bucket/object APIs, multipart upload, object tags, metadata, object lock, checksums, and signed requests.</dd></div>
+            <div><dt>Do not use when</dt><dd>The requirement is an AWS-managed integration rather than an S3 protocol capability.</dd></div>
+            <div><dt>Architecture</dt><dd class="critical">Validates SigV4, delegates authorization, reads bucket metadata, calls object APIs, and emits durable audit/access-log events.</dd></div>
+          </dl>
+          <div class="mini-metrics"><span>request latency</span><span>4xx/5xx rate</span><span>SigV4 failures</span><span>multipart errors</span></div>
+        </article>
+
+        <article class="service" id="control-api">
+          <div>
+            <div class="eyebrow">control-api</div>
+            <h3>Internal provisioning API</h3>
+          </div>
+          <dl>
+            <div><dt>Business value</dt><dd>Lets operator, OBC/COSI, Helm automation, and platform tooling create buckets and credentials consistently.</dd></div>
+            <div><dt>Use when</dt><dd>Kubernetes CRs or platform workflows need a stable API that is not exposed to normal application traffic.</dd></div>
+            <div><dt>Do not use when</dt><dd>Application code only needs normal S3 object operations.</dd></div>
+            <div><dt>Architecture</dt><dd class="critical">Fronts bucket, identity, endpoint, and access provisioning while keeping controller workflows out of the public S3 edge.</dd></div>
+          </dl>
+          <div class="mini-metrics"><span>provision latency</span><span>reconcile errors</span><span>secret writes</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="service-group">
+      <h2>Security and Governance</h2>
+      <div class="service-grid">
+        <article class="service" id="identity-service">
+          <div>
+            <div class="eyebrow">identity-service</div>
+            <h3>Credential and subject registry</h3>
+          </div>
+          <dl>
+            <div><dt>Business value</dt><dd>Separates S3 credentials from web/operator authentication and supports bucket-scoped access.</dd></div>
+            <div><dt>Use when</dt><dd>Buckets need generated access keys, secret keys, session tokens, TTLs, or subject cleanup.</dd></div>
+            <div><dt>Do not use when</dt><dd>Credentials are expected to be fully owned by an external identity provider with no Li9 mapping.</dd></div>
+            <div><dt>Architecture</dt><dd class="critical">Persists identity state, supports generated Secrets, and handles expired credential cleanup.</dd></div>
+          </dl>
+          <div class="mini-metrics"><span>credential count</span><span>expired cleanup</span><span>auth lookup latency</span></div>
+        </article>
+
+        <article class="service" id="policy-service">
+          <div>
+            <div class="eyebrow">policy-service</div>
+            <h3>AWS-style authorization policy</h3>
+          </div>
+          <dl>
+            <div><dt>Business value</dt><dd>Enforces bucket access with familiar S3 policy semantics and explicit allow/deny decisions.</dd></div>
+            <div><dt>Use when</dt><dd>Teams need action scoping, resource scoping, prefixes, conditions, and predictable denied-request behavior.</dd></div>
+            <div><dt>Do not use when</dt><dd>The requirement is AWS account IAM federation rather than local S3 policy evaluation.</dd></div>
+            <div><dt>Architecture</dt><dd class="critical">Evaluates request context from the gateway and returns a decision without owning object data.</dd></div>
+          </dl>
+          <div class="mini-metrics"><span>allow/deny rate</span><span>policy parse errors</span><span>decision latency</span></div>
+        </article>
+
+        <article class="service" id="kms-service">
+          <div>
+            <div class="eyebrow">kms-service</div>
+            <h3>Local KMS-style encryption API</h3>
+          </div>
+          <dl>
+            <div><dt>Business value</dt><dd>Supports server-side encryption without requiring AWS KMS.</dd></div>
+            <div><dt>Use when</dt><dd>Data must be encrypted with generated or existing key material controlled by the platform.</dd></div>
+            <div><dt>Do not use when</dt><dd>Policy requires an external HSM or enterprise KMS that has not been integrated and tested.</dd></div>
+            <div><dt>Architecture</dt><dd class="critical">Manages local master key material, data-key operations, and durable encryption audit delivery.</dd></div>
+          </dl>
+          <div class="mini-metrics"><span>key ops</span><span>encrypt/decrypt errors</span><span>audit outbox lag</span></div>
+        </article>
+
+        <article class="service" id="audit-service">
+          <div>
+            <div class="eyebrow">audit-service</div>
+            <h3>Security and access audit sink</h3>
+          </div>
+          <dl>
+            <div><dt>Business value</dt><dd>Gives security and operations teams a durable record of S3 and KMS-relevant activity.</dd></div>
+            <div><dt>Use when</dt><dd>Bucket access, credential use, encryption events, and gateway operations must be investigated later.</dd></div>
+            <div><dt>Do not use when</dt><dd>Audit data is intentionally sent only to an external SIEM and local persistence is disabled.</dd></div>
+            <div><dt>Architecture</dt><dd class="critical">Persists events to PVC-backed state and receives durable outbox deliveries from gateway and KMS services.</dd></div>
+          </dl>
+          <div class="mini-metrics"><span>event rate</span><span>outbox retries</span><span>persist errors</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="service-group">
+      <h2>Bucket, Metadata, and Data</h2>
+      <div class="service-grid">
+        <article class="service" id="bucket-service">
+          <div>
+            <div class="eyebrow">bucket-service</div>
+            <h3>Bucket catalog and configuration</h3>
+          </div>
+          <dl>
+            <div><dt>Business value</dt><dd>Centralizes bucket lifecycle, versioning, tags, replication, policy, archive, website, and object-lock settings.</dd></div>
+            <div><dt>Use when</dt><dd>Bucket configuration must be consistent across S3 APIs, operator CRs, and background jobs.</dd></div>
+            <div><dt>Do not use when</dt><dd>Only raw filesystem object placement is needed with no S3 bucket semantics.</dd></div>
+            <div><dt>Architecture</dt><dd class="critical">Delegates durable persistence to the metadata plane and exposes bucket-specific control APIs.</dd></div>
+          </dl>
+          <div class="mini-metrics"><span>bucket count</span><span>config errors</span><span>control latency</span></div>
+        </article>
+
+        <article class="service" id="metadata-service">
+          <div>
+            <div class="eyebrow">metadata-service</div>
+            <h3>Object and bucket metadata</h3>
+          </div>
+          <dl>
+            <div><dt>Business value</dt><dd>Makes bucket state and object manifests durable independently from gateway replicas.</dd></div>
+            <div><dt>Use when</dt><dd>Listings, versions, restore status, lifecycle state, object lock, and shard manifests must survive restarts.</dd></div>
+            <div><dt>Do not use when</dt><dd>The deployment is intentionally stateless and external metadata is authoritative.</dd></div>
+            <div><dt>Architecture</dt><dd class="critical">Uses PVC-backed Raft/KV/WAL metadata, either dedicated or colocated with data in per-node deployments.</dd></div>
+          </dl>
+          <div class="mini-metrics"><span>raft health</span><span>WAL errors</span><span>metadata latency</span></div>
+        </article>
+
+        <article class="service" id="object-service">
+          <div>
+            <div class="eyebrow">object-service</div>
+            <h3>Object placement and S3 semantics</h3>
+          </div>
+          <dl>
+            <div><dt>Business value</dt><dd>Owns the durability behavior that turns S3 requests into protected object storage.</dd></div>
+            <div><dt>Use when</dt><dd>Objects need erasure coding, replication, archive placement, restore behavior, checksums, or multipart assembly.</dd></div>
+            <div><dt>Do not use when</dt><dd>Object bytes should bypass product metadata, authorization, and durability rules.</dd></div>
+            <div><dt>Architecture</dt><dd class="critical">Writes shards or replicas, commits manifests, manages archive tiering, and exposes internal APIs used by gateway and healing.</dd></div>
+          </dl>
+          <div class="mini-metrics"><span>write latency</span><span>read latency</span><span>commit failures</span><span>multipart state</span></div>
+        </article>
+
+        <article class="service" id="storage-node">
+          <div>
+            <div class="eyebrow">storage-node</div>
+            <h3>Shard persistence service</h3>
+          </div>
+          <dl>
+            <div><dt>Business value</dt><dd>Isolates PVC or native path access so only one service owns shard files and disk-level durability probes.</dd></div>
+            <div><dt>Use when</dt><dd>Li9 owns the storage plane through per-node PVCs, shared PVCs, or VM/native disk paths.</dd></div>
+            <div><dt>Do not use when</dt><dd>The data plane is external and object-service is configured for an external backend.</dd></div>
+            <div><dt>Architecture</dt><dd class="critical">Validates fencing headers, writes shard files durably, exposes shard read/write/delete APIs and health information.</dd></div>
+          </dl>
+          <div class="mini-metrics"><span>disk capacity</span><span>fencing rejects</span><span>shard write errors</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="service-group">
+      <h2>Background Automation</h2>
+      <div class="service-grid">
+        <article class="service" id="healing-service">
+          <div>
+            <div class="eyebrow">healing-service</div>
+            <h3>Repair and policy execution</h3>
+          </div>
+          <dl>
+            <div><dt>Business value</dt><dd>Keeps stored data healthy and applies lifecycle, replication, archive, restore, and cleanup policies.</dd></div>
+            <div><dt>Use when</dt><dd>The platform needs automatic recovery after node return or scheduled object management.</dd></div>
+            <div><dt>Do not use when</dt><dd>All background object management is delegated to an external service.</dd></div>
+            <div><dt>Architecture</dt><dd class="critical">Scans metadata, compares shard state, retries durable outboxes, and performs idempotent repair work.</dd></div>
+          </dl>
+          <div class="mini-metrics"><span>repair queue</span><span>repaired objects</span><span>policy lag</span><span>restore errors</span></div>
+        </article>
+      </div>
+    </section>
+    </article>
+  </main>
+  <script src="assets/site.js"></script>
+  <footer>Li9 S3 Storage runtime documentation image</footer>
+</body>
+</html>

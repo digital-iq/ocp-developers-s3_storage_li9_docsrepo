@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Checksums And Payload Integrity - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / S3 API</div>
+        <h1>Checksums and payload integrity.</h1>
+        <p class="lede">Li9 S3 validates client payload integrity, stores checksum metadata, and returns checksum information through AWS-compatible object attributes and read paths where supported.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-s3-api.html">All S3 API reference pages</a></p>
+
+      <details class="reference-setup">
+        <summary>Common AWS CLI setup</summary>
+        <p>Run this once for a bucket issued by the active platform control surface. On OpenShift, the values come from the generated <code>S3Bucket</code> or <code>S3BucketAccess</code> Secret. On Helm, Linux, or Windows, use the credentials issued by the runtime control API or administrator tooling.</p>
+        <pre><code>export NS=li9-s3-runtime
+export BUCKET_CR=app-data
+export BUCKET="$(oc -n "$NS" get s3bucket "$BUCKET_CR" -o jsonpath='{.status.bucketName}')"
+export SECRET="$(oc -n "$NS" get s3bucket "$BUCKET_CR" -o jsonpath='{.status.secretName}')"
+export ENDPOINT="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ENDPOINT_URL}' | base64 -d)"
+export AWS_ACCESS_KEY_ID="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)"
+export AWS_SECRET_ACCESS_KEY="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)"
+export AWS_REGION="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_REGION}' 2&gt;/dev/null | base64 -d || true)"
+export AWS_REGION="${AWS_REGION:-us-east-1}"
+export AWS_EC2_METADATA_DISABLED=true
+li9s3() {
+  aws --endpoint-url "$ENDPOINT" --region "$AWS_REGION" --no-verify-ssl s3api "$@"
+}</code></pre>
+        <p>For Helm, Linux, and Windows replace the exported values with the endpoint and credentials from that platform. The commands below intentionally use standard AWS CLI syntax after the setup.</p>
+      </details>
+
+      <h2 id="integrity-controls">Integrity Controls</h2>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-s3-checksums-payload-integrity-flow.png" alt="Checksum validation flow. Payload integrity is validated on write, persisted with object metadata, and returned through compatible checksum attributes." loading="lazy">
+        <figcaption>Use checksums when clients need end-to-end payload integrity beyond transport-level TLS.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Control</th><th>Purpose</th><th>Where It Appears</th></tr></thead>
+        <tbody>
+          <tr><td><code>Content-MD5</code></td><td>Rejects corrupted payloads on write.</td><td>Put object and multipart part uploads.</td></tr>
+          <tr><td>SigV4 payload hash</td><td>Protects signed request bodies.</td><td>AWS Signature Version 4 requests.</td></tr>
+          <tr><td>Flexible checksums</td><td>Stores and returns CRC/SHA checksum metadata.</td><td><code>put-object</code>, <code>head-object</code>, object attributes.</td></tr>
+          <tr><td>Multipart aggregation</td><td>Preserves integrity across multipart uploads.</td><td>Complete multipart upload and object attributes.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="sha256-example">SHA256 Example</h2>
+      <pre><code>printf 'checksum
+' &gt; /tmp/checksum.txt
+li9s3 put-object --bucket "$BUCKET" --key checksums/sha256.txt --body /tmp/checksum.txt --checksum-algorithm SHA256
+li9s3 head-object --bucket "$BUCKET" --key checksums/sha256.txt --checksum-mode ENABLED
+li9s3 get-object-attributes   --bucket "$BUCKET"   --key checksums/sha256.txt   --object-attributes Checksum,ObjectSize,StorageClass</code></pre>
+
+      <h2 id="negative-test">Negative Test</h2>
+      <p>When a client supplies a checksum that does not match the payload, the service should reject the write rather than storing corrupted data.</p>
+      <pre><code>printf 'bad-checksum
+' &gt; /tmp/bad-checksum.txt
+aws --endpoint-url "$ENDPOINT" --region "$AWS_REGION" --no-verify-ssl s3api put-object   --bucket "$BUCKET"   --key checksums/bad.txt   --body /tmp/bad-checksum.txt   --content-md5 AAAAAAAAAAAAAAAAAAAAAA== || test "$?" -ne 0</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

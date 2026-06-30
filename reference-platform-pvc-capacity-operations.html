@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PVC And Capacity Operations - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / Platform</div>
+        <h1>PVC and capacity operations.</h1>
+        <p class="lede">PVC capacity is part of the storage lifecycle, not just a StatefulSet template field. The owner must update PVCs, confirm filesystem expansion, and restart/remount workloads where required.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-platform.html">All platform reference pages</a></p>
+
+      <h2 id="deletion-policy">Deletion Policy</h2>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-platform-pvc-capacity-operations-flow.png" alt="PVC capacity operation flow. Capacity changes update PVCs, wait for actual expansion, and restart holders only when the filesystem needs it." loading="lazy">
+        <figcaption>Use this page for safe capacity growth and deletion-policy behavior around persistent data.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Policy</th><th>Expected Behavior</th><th>Use When</th></tr></thead>
+        <tbody>
+          <tr><td><code>Retain</code></td><td>Runtime resources may be removed, but persistent data is kept for recovery or manual cleanup.</td><td>Default production behavior.</td></tr>
+          <tr><td><code>Delete</code></td><td>Managed data PVCs are deleted and data removal is intended.</td><td>Ephemeral environments or explicit destructive cleanup.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="expansion-flow">Expansion Flow</h2>
+      <ol>
+        <li>Confirm the StorageClass allows expansion.</li>
+        <li>Increase the requested size in the platform control surface.</li>
+        <li>Confirm the PVC object capacity changes.</li>
+        <li>Restart or remount workloads that need filesystem resize.</li>
+        <li>Verify runtime status and object write/read behavior.</li>
+      </ol>
+      <pre><code>oc get storageclass ocs-storagecluster-ceph-rbd -o jsonpath='{.allowVolumeExpansion}{"
+"}'
+oc -n li9-s3-runtime patch s3storage li9-s3 --type=merge -p '{"spec":{"storage":{"data":{"pvc":{"size":"40Gi"}}}}}'
+oc -n li9-s3-runtime get pvc -w
+oc -n li9-s3-runtime get s3storage li9-s3 -o jsonpath='{.status.conditions}' | python3 -m json.tool</code></pre>
+
+      <h2 id="native-packages">Native Package Capacity</h2>
+      <table>
+        <thead><tr><th>Platform</th><th>Capacity Change</th><th>Verification</th></tr></thead>
+        <tbody>
+          <tr><td>Linux</td><td>Extend the block device/filesystem or mount a larger volume at the configured data/metadata path.</td><td><code>df -h</code>, <code>findmnt</code>, <code>li9-s3ctl health</code>.</td></tr>
+          <tr><td>Windows</td><td>Extend the volume in Windows storage management or attach a larger volume at the configured path.</td><td><code>Get-Volume</code>, <code>Get-Disk</code>, <code>li9-s3ctl.exe health</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="risks">Risks</h2>
+      <ul>
+        <li>Changing only a StatefulSet volume template does not resize existing PVCs.</li>
+        <li>Some filesystems need pod restart or remount before the expanded size is visible.</li>
+        <li>Deleting PVCs with <code>Delete</code> policy is destructive and is treated as data removal.</li>
+      </ul>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

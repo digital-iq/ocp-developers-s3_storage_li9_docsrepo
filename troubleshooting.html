@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Troubleshooting - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+      <nav>
+        <a href="index.html">Overview</a>
+        <a href="/runtime/">Runtime</a>
+        <a href="install.html">Install</a>
+        <a href="cr-examples.html">CR Examples</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </nav>
+    </div>
+  </header>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+        <a class="sub" href="administration.html#buckets">Buckets and access</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a class="active" href="troubleshooting.html">Troubleshooting</a>
+        <a class="sub" href="#operator-is-not-reconciling">Operator reconciliation</a>
+        <a class="sub" href="#s3storage-is-not-ready">Storage readiness</a>
+        <a class="sub" href="#documentation-site-is-not-available">Documentation site</a>
+        <a class="sub" href="#application-cannot-use-generated-credentials">Credentials</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/services.html">Runtime services</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Runtime</h3>
+        <a href="/runtime/index.html">Overview</a>
+        <a class="sub" href="/runtime/usage.html">Usage</a>
+        <a class="sub" href="/runtime/services.html">Services</a>
+        <a class="sub" href="/runtime/architecture.html">Architecture</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Operations</div>
+        <h1>Troubleshooting Guide</h1>
+        <p class="lede">Start with CR status, managed resources, operator logs, and route/service health. Most failures are visible in <code>status.conditions</code>.</p>
+      </section>
+
+    <h2>Fast Triage</h2>
+    <table>
+      <thead>
+        <tr><th>Symptom</th><th>First check</th><th>Likely owner</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>CR stays <code>Progressing</code></td><td><code>oc describe s3storage</code> and managed workload readiness.</td><td>Operator reconciliation or platform resources.</td></tr>
+        <tr><td>PVCs stay Pending</td><td>StorageClass name, volume binding mode, node selectors, and requested size.</td><td>Cluster storage/platform.</td></tr>
+        <tr><td>AWS CLI gets 403</td><td>Generated Secret, bucket policy, <code>S3BucketAccess.spec.access</code>, and gateway auth logs.</td><td>Identity or policy configuration.</td></tr>
+        <tr><td>AWS CLI gets 5xx</td><td>Gateway logs, metadata quorum, object-service errors, storage-node health.</td><td>Runtime data path.</td></tr>
+        <tr><td>Docs root works but <code>/runtime/</code> fails</td><td><code>runtime-docs</code> container and proxy env in <code>operator-docs</code>.</td><td>Documentation deployment.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="operator-is-not-reconciling">Operator Is Not Reconciling</h2>
+    <pre><code>oc get pods -n &lt;operator-namespace&gt; -l app.kubernetes.io/name=li9-s3-operator
+oc logs -n &lt;operator-namespace&gt; deploy/li9-s3-controller-manager
+oc get lease -n &lt;operator-namespace&gt; li9-s3-operator-leader -o yaml</code></pre>
+    <ul>
+      <li>Check that exactly one replica holds the leader lease.</li>
+      <li>Check RBAC for the affected namespace.</li>
+      <li>Check whether the CR is in a namespace watched by the operator.</li>
+    </ul>
+
+    <h2 id="s3storage-is-not-ready">S3Storage Is Not Ready</h2>
+    <pre><code>oc get s3storage -A
+oc describe s3storage -n &lt;namespace&gt; &lt;name&gt;
+oc get deploy,sts,pvc,svc,route -n &lt;serviceNamespace&gt;</code></pre>
+    <ul>
+      <li>Verify storage class names and PVC binding.</li>
+      <li>Verify node labels, tolerations, and failure-domain labels.</li>
+      <li>Check that the selected protection mode has enough nodes.</li>
+    </ul>
+
+    <h2 id="documentation-site-is-not-available">Documentation Site Is Not Available</h2>
+    <pre><code>oc get s3documentation -A
+oc get deploy,svc,route -n &lt;namespace&gt; -l app.kubernetes.io/name=li9-s3-documentation
+oc get s3documentation -n &lt;namespace&gt; &lt;name&gt; -o jsonpath='{.status.url}'
+oc logs -n &lt;namespace&gt; deploy/&lt;name&gt;-docs -c runtime-docs
+oc logs -n &lt;namespace&gt; deploy/&lt;name&gt;-docs -c operator-docs</code></pre>
+    <ul>
+      <li>If the Deployment is not ready, check image pull access for both docs images.</li>
+      <li>If the Service works but the Route does not, check route host conflicts and router admission.</li>
+      <li>If <code>/runtime/</code> is unavailable but the root site works, check the <code>runtime-docs</code> container and the proxy environment in the <code>operator-docs</code> container.</li>
+    </ul>
+
+    <h2 id="application-cannot-use-generated-credentials">Application Cannot Use Generated Credentials</h2>
+    <pre><code>oc get s3bucket,s3bucketaccess -n &lt;namespace&gt;
+oc get secret -n &lt;namespace&gt; &lt;secret-name&gt; -o yaml
+aws --endpoint-url &lt;endpoint&gt; s3api head-bucket --bucket &lt;bucket&gt;</code></pre>
+    <ul>
+      <li>Confirm endpoint, bucket, region, access key, secret key, and session token are mounted into the pod.</li>
+      <li>Check bucket policy and access actions.</li>
+      <li>Check gateway logs for SigV4, time-skew, or authorization errors.</li>
+    </ul>
+    </article>
+  </main>
+  <script src="assets/site.js"></script>
+  <footer>Li9 S3 unified documentation site</footer>
+</body>
+</html>

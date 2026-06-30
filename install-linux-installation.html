@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Linux Packages Installation - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub active" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Linux Packages</div>
+        <h1>Linux Packages: Installation.</h1>
+        <p class="lede">Run the production installation procedure with copy-paste commands and field references.</p>
+      </section>
+
+      <h2>Installation</h2>
+      <div class="procedure">
+        <div class="procedure-item"><div><h3>1. Prepare OS resources</h3><p>Create users, directories, permissions, firewall rules, and TLS directories on every node.</p></div></div>
+        <div class="procedure-item"><div><h3>2. Install packages</h3><p>Install RPM or DEB packages from online or internal repositories.</p></div></div>
+        <div class="procedure-item"><div><h3>3. Write service configuration</h3><p>Use one cluster config with node-specific IDs.</p></div></div>
+        <div class="procedure-item"><div><h3>4. Bootstrap, join, and start</h3><p>Initialize the first node, join the remaining nodes, and enable systemd units on all nodes.</p></div></div>
+        <div class="procedure-item"><div><h3>5. Verify S3 and failure behavior</h3><p>Write from an external client while one node is stopped.</p></div></div>
+      </div>
+
+      <h3>1. Prepare Each Host</h3>
+      <pre><code>sudo useradd --system --home-dir /var/lib/li9/s3-storage --shell /usr/sbin/nologin li9-s3 || true
+sudo install -d -o li9-s3 -g li9-s3 -m 0750 /var/lib/li9/s3-storage /var/log/li9/s3-storage
+sudo install -d -o root -g li9-s3 -m 0750 /etc/li9/s3-storage /etc/li9/s3-storage/tls
+sudo firewall-cmd --add-port=9000/tcp --permanent || true
+sudo firewall-cmd --add-port=9001-9010/tcp --permanent || true
+sudo firewall-cmd --reload || true</code></pre>
+
+      <h3>2. Install Packages</h3>
+      <p>Use the <a href="https://github.com/digital-iq/ocp-developers-s3_storage_li9_linuxrepo/releases/download/v1.1.0-alpha.14/">Linux package release</a> as the connected source, or replace <code>LI9_LINUX_RELEASE_BASE</code> with your internal mirror URL in disconnected environments.</p>
+      <pre><code>export LI9_NATIVE_VERSION=1.1.0-alpha.14
+: "${LI9_LINUX_RELEASE_BASE:?set to the Linux package release or internal mirror URL}"
+
+curl -fL "${LI9_LINUX_RELEASE_BASE}/li9-s3-storage-1.1.0.alpha.14-1.x86_64.rpm" -o li9-s3-storage-1.1.0.alpha.14-1.x86_64.rpm
+curl -fL "${LI9_LINUX_RELEASE_BASE}/li9-s3-storage_1.1.0.alpha.14-1_amd64.deb" -o li9-s3-storage_1.1.0.alpha.14-1_amd64.deb
+curl -fL "${LI9_LINUX_RELEASE_BASE}/checksums.txt" -o checksums.txt
+sha256sum -c checksums.txt
+
+if command -v dnf &gt;/dev/null 2&gt;&amp;1; then
+  sudo dnf install -y ./li9-s3-storage-1.1.0.alpha.14-1.x86_64.rpm
+elif command -v apt-get &gt;/dev/null 2&gt;&amp;1; then
+  sudo apt-get update
+  sudo apt install -y ./li9-s3-storage_1.1.0.alpha.14-1_amd64.deb
+else
+  echo "dnf or apt-get is required for this package install path." &gt;&amp;2
+  exit 1
+fi
+
+ls -1 /opt/li9/s3-storage/bin
+systemctl cat li9-s3-storage.target</code></pre>
+
+      <h3>3. Configure The Cluster</h3>
+      <p>Generate one shared fencing token and one shared KMS master key once, store them in your secret manager, and reuse the same values on every node. The example below uses three storage nodes and starts the S3 gateway/control services on the first node.</p>
+      <pre><code>export LI9_REGION=li9-mgm01
+export LI9_ALLOWED_REGIONS=li9-mgm01,us-east-1
+export LI9_SCHEME=http
+export LI9_CONTROL_HOST=10.10.10.11
+export LI9_GATEWAY_HOST=10.10.10.11
+export LI9_STORAGE_NODE_URLS="${LI9_SCHEME}://10.10.10.11:9008,${LI9_SCHEME}://10.10.10.12:9008,${LI9_SCHEME}://10.10.10.13:9008"
+export LI9_WRITE_QUORUM=2
+export LI9_FENCING_TOKEN="$(openssl rand -base64 32 | tr -d '\n')"
+export LI9_KMS_MASTER_KEY_B64="$(openssl rand -base64 32 | tr -d '\n')"
+
+# Run on node 1:
+sudo /opt/li9/s3-storage/bin/li9-s3-render-config \
+  --node-host 127.0.0.1 \
+  --control-host 127.0.0.1 \
+  --gateway-host "${LI9_GATEWAY_HOST}" \
+  --storage-node-urls "${LI9_SCHEME}://127.0.0.1:9008,${LI9_SCHEME}://10.10.10.12:9008,${LI9_SCHEME}://10.10.10.13:9008" \
+  --write-quorum "${LI9_WRITE_QUORUM}" \
+  --fencing-token "${LI9_FENCING_TOKEN}" \
+  --kms-master-key-b64 "${LI9_KMS_MASTER_KEY_B64}" \
+  --region "${LI9_REGION}" \
+  --allowed-regions "${LI9_ALLOWED_REGIONS}"
+
+# Run on node 2:
+sudo /opt/li9/s3-storage/bin/li9-s3-render-config \
+  --node-host 127.0.0.1 \
+  --control-host "${LI9_CONTROL_HOST}" \
+  --gateway-host "${LI9_GATEWAY_HOST}" \
+  --storage-node-urls "${LI9_STORAGE_NODE_URLS}" \
+  --write-quorum "${LI9_WRITE_QUORUM}" \
+  --fencing-token "${LI9_FENCING_TOKEN}" \
+  --kms-master-key-b64 "${LI9_KMS_MASTER_KEY_B64}" \
+  --region "${LI9_REGION}" \
+  --allowed-regions "${LI9_ALLOWED_REGIONS}"
+
+# Run on node 3 with the same command as node 2.</code></pre>
+
+      <h3>Linux Configuration Properties</h3>
+      <table>
+        <thead><tr><th>Property</th><th>Description</th><th>Allowed Or Recommended Values</th></tr></thead>
+        <tbody>
+          <tr><td><code>--node-host</code></td><td>Address used by local services on this host.</td><td><code>127.0.0.1</code> for local process wiring, or a routable host address when services are split.</td></tr>
+          <tr><td><code>--control-host</code></td><td>Host running control-api, identity, policy, bucket, metadata, KMS, and audit services.</td><td>First node IP or DNS in the verified native layout.</td></tr>
+          <tr><td><code>--gateway-host</code></td><td>Host returned to S3 clients by the control API.</td><td>Load balancer, DNS name, or first node IP for a lab install.</td></tr>
+          <tr><td><code>--storage-node-urls</code></td><td>Comma-separated storage-node URLs used by object-service and healing-service.</td><td>Example: three storage-node HTTP endpoints on port <code>9008</code>.</td></tr>
+          <tr><td><code>--write-quorum</code></td><td>Number of storage-node writes required before an object write is committed.</td><td><code>1</code> for single-node, <code>2</code> for three nodes.</td></tr>
+          <tr><td><code>--fencing-token</code></td><td>Shared token used to reject stale storage writes.</td><td>Same 32-byte base64 value on all nodes.</td></tr>
+          <tr><td><code>--kms-master-key-b64</code></td><td>Shared KMS/SSE master key.</td><td>Same 32-byte base64 value on all nodes.</td></tr>
+          <tr><td><code>--region</code></td><td>Default S3 region.</td><td>Example: <code>li9-mgm01</code>; default is <code>us-east-1</code>.</td></tr>
+          <tr><td><code>--allowed-regions</code></td><td>Comma-separated accepted S3 regions.</td><td>Must include the default region.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4. Bootstrap, Join, And Start</h3>
+      <pre><code># Run on every storage node:
+sudo systemctl enable li9-s3-storage-node.target
+sudo systemctl restart li9-s3@storage-node.service
+sudo systemctl is-active --quiet li9-s3@storage-node.service
+
+# Run on the control/gateway node:
+sudo systemctl enable --now li9-s3-control.target li9-s3-gateway.target
+curl -fsS "${LI9_SCHEME}://127.0.0.1:9001/v1/info"
+curl -fsS "${LI9_SCHEME}://127.0.0.1:9000/v1/info"
+curl -fsS "${LI9_SCHEME}://127.0.0.1:9008/v1/info"</code></pre>
+
+      <h3>5. Verify S3 And Node Failure</h3>
+      <pre><code>export S3_ENDPOINT="${LI9_SCHEME}://${LI9_GATEWAY_HOST}:9000"
+export AWS_DEFAULT_REGION=li9-mgm01
+PROVISION_JSON="$(curl -skS \
+  -H 'Content-Type: application/json' \
+  -d "{\"bucketName\":\"linux-install-check\",\"region\":\"${AWS_DEFAULT_REGION}\",\"issueCredential\":true}" \
+  "${LI9_SCHEME}://${LI9_CONTROL_HOST}:9001/v1/s3-bucket-provisions")"
+export AWS_ACCESS_KEY_ID="$(printf '%s' "${PROVISION_JSON}" | jq -r '.accessKeyId')"
+export AWS_SECRET_ACCESS_KEY="$(printf '%s' "${PROVISION_JSON}" | jq -r '.secretKey')"
+export AWS_SESSION_TOKEN="$(printf '%s' "${PROVISION_JSON}" | jq -r '.sessionToken // empty')"
+
+aws --endpoint-url "${S3_ENDPOINT}" s3 mb s3://linux-install-check
+dd if=/dev/urandom of=/tmp/linux-check.bin bs=1M count=64
+aws --endpoint-url "${S3_ENDPOINT}" s3 cp /tmp/linux-check.bin s3://linux-install-check/linux-check.bin
+aws --endpoint-url "${S3_ENDPOINT}" s3 cp s3://linux-install-check/linux-check.bin /tmp/linux-check-read.bin
+sha256sum /tmp/linux-check.bin /tmp/linux-check-read.bin
+
+# In another terminal, stop one node during client writes:
+sudo systemctl stop li9-s3@storage-node.service
+sudo systemctl start li9-s3@storage-node.service
+curl -fsS "${LI9_SCHEME}://${LI9_CONTROL_HOST}:9009/v1/info" || sudo systemctl start li9-s3@healing-service.service</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

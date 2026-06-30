@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Storage Topology - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / Runtime</div>
+        <h1>Storage topology and runtime shape.</h1>
+        <p class="lede">Storage topology decides whether Li9 S3 owns the storage plane, runs only S3 services over an existing backend, or exposes a storage plane for another S3 plane. The concepts are shared across platforms even though the configuration syntax changes.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-platform.html">All platform reference pages</a></p>
+
+      <h2 id="modes">Runtime Modes</h2>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-platform-storage-topology-flow.png" alt="Storage topology flow. Topology decides whether Li9 S3 owns storage nodes, uses shared PVCs, or connects an S3 plane to an external storage plane." loading="lazy">
+        <figcaption>Use topology settings to align data placement, metadata durability, and failure-domain assumptions.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Mode</th><th>Meaning</th><th>Use When</th></tr></thead>
+        <tbody>
+          <tr><td><code>S3OverPVC</code></td><td>S3 services run over a shared PVC or filesystem backend.</td><td>You want the simplest Kubernetes deployment and underlying storage already provides durability.</td></tr>
+          <tr><td><code>FullDistributed</code></td><td>Li9 S3 deploys gateway/control services and Li9-owned storage nodes.</td><td>You want product-managed data protection across nodes/failure domains.</td></tr>
+          <tr><td><code>StoragePlaneOnly</code></td><td>Only the Li9 storage plane is deployed.</td><td>You are separating storage nodes from an S3/control plane.</td></tr>
+          <tr><td><code>S3PlaneOnly</code></td><td>Gateway/control services connect to an existing storage plane.</td><td>You want an S3 API plane over an already deployed Li9 storage plane.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="data-metadata-archive">Data, Metadata, And Archive Placement</h2>
+      <table>
+        <thead><tr><th>Area</th><th>Placement Options</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Data</td><td>Per-node PVC, shared PVC/filesystem, or external storage plane.</td><td>Use PerNodePVC with RWO for node-local storage nodes; use SharedPVC with RWX for S3-over-PVC.</td></tr>
+          <tr><td>Metadata</td><td>Dedicated PVC, colocated with data, or host path in native installs.</td><td>Raft/KV/WAL is always the metadata architecture; only placement changes.</td></tr>
+          <tr><td>Archive</td><td>Same data plane, dedicated archive PVC/backend, or configured archive tier.</td><td>Policies decide which buckets or objects move to archive tiers.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="platform-mapping">Platform Mapping</h2>
+      <table>
+        <thead><tr><th>Mode</th><th>Where To Configure</th></tr></thead>
+        <tbody>
+          <tr><td>OpenShift Operator</td><td><code>S3Storage.spec.deployment</code> and <code>S3Storage.spec.storage</code>.</td></tr>
+          <tr><td>Helm</td><td>Chart values under deployment/runtime/storage sections.</td></tr>
+          <tr><td>Linux</td><td>Host config file with node list, data paths, metadata paths, and protection settings.</td></tr>
+          <tr><td>Windows</td><td>Host config file with node list, Windows paths, and protection settings.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="verification">Verification</h2>
+      <pre><code>oc -n li9-s3-runtime get s3storage li9-s3 -o jsonpath='{.spec.deployment.mode}{"
+"}'
+oc -n li9-s3-runtime get s3storage li9-s3 -o jsonpath='{.status.effectiveConfiguration}' | python3 -m json.tool
+oc -n li9-s3-runtime get statefulset,deploy,pvc -l app.kubernetes.io/part-of=li9-s3-storage</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

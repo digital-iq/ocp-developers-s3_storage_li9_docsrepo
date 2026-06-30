@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lifecycle Policy And Restore Workflow - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / S3 API</div>
+        <h1>Lifecycle Policy And Restore Workflow</h1>
+        <p class="lede">Use S3BucketLifecycle for raw AWS-compatible lifecycle XML and S3ArchivePolicy for Li9-owned archive rules. The storage-class names in XML are S3 API tokens for client compatibility; the archive placement is implemented locally by Li9 S3.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-s3-api.html">All S3 API reference pages</a></p>
+
+      <details class="reference-setup">
+        <summary>Common AWS CLI setup</summary>
+      <p>Run this once for the target bucket. Replace <code>li9-s3-runtime</code> and <code>app-data</code> with your namespace and <code>S3Bucket</code> resource name.</p>
+      <pre><code>export NS=li9-s3-runtime
+export BUCKET_CR=app-data
+export BUCKET="$(oc -n "$NS" get s3bucket "$BUCKET_CR" -o jsonpath='{.status.bucketName}')"
+export SECRET="$(oc -n "$NS" get s3bucket "$BUCKET_CR" -o jsonpath='{.status.secretName}')"
+export ENDPOINT="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ENDPOINT_URL}' | base64 -d)"
+export AWS_ACCESS_KEY_ID="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)"
+export AWS_SECRET_ACCESS_KEY="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)"
+export AWS_REGION="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_REGION}' 2&gt;/dev/null | base64 -d || true)"
+export AWS_REGION="${AWS_REGION:-us-east-1}"
+export AWS_EC2_METADATA_DISABLED=true
+li9s3() {
+  aws --endpoint-url "$ENDPOINT" --region "$AWS_REGION" --no-verify-ssl s3api "$@"
+}</code></pre>
+      <p>To verify the setup, run:</p>
+      <pre><code>li9s3 head-bucket --bucket "$BUCKET"
+li9s3 list-objects-v2 --bucket "$BUCKET" --max-keys 1</code></pre>
+
+      </details>
+
+      <h2 id="lifecycle-policy-and-restore-workflow">Lifecycle Policy And Restore Workflow</h2>
+      <p>Use <code>S3BucketLifecycle</code> for raw AWS-compatible lifecycle XML and <code>S3ArchivePolicy</code> for Li9-owned archive rules. The storage-class names in XML are S3 API tokens for client compatibility; the archive placement is implemented locally by Li9 S3 on the configured archive PVC/path. The healing service applies lifecycle expiration, transition, restore completion, restore expiry, multipart-abort cleanup, and replication/reporting cycles.</p>
+      <figure class="docs-diagram">
+        <img src="assets/diagrams/s3-lifecycle-engineering-overview.png" alt="Li9 S3 lifecycle, archive, and restore engineering flow showing lifecycle rule reconciliation, effective metadata policy, active object transition to archive placement, RestoreObject, temporary active copy, and cleanup after restore expiry." loading="lazy">
+        <figcaption>Engineering view. Lifecycle rules are reconciled into effective policy, lifecycle work transitions matching objects from active placement to archive placement, and <code>RestoreObject</code> creates a temporary readable copy until the restore window expires.</figcaption>
+      </figure>
+      <table>
+        <thead><tr><th>Interface</th><th>Best For</th><th>What The Runtime Does</th></tr></thead>
+        <tbody>
+          <tr><td><code>S3ArchivePolicy</code></td><td>Simple operator-managed archive rules by prefix.</td><td>Renders lifecycle transition XML and keeps status on the CR.</td></tr>
+          <tr><td><code>S3BucketLifecycle</code></td><td>Full lifecycle XML, including filters, noncurrent versions, size bounds, and multipart cleanup.</td><td>Stores the AWS-compatible document and lets <code>healing-service</code> apply it.</td></tr>
+          <tr><td>S3 API</td><td>Applications or backup tools that already manage lifecycle through AWS CLI/SDK.</td><td>Persists compatible configuration and rejects invalid shapes before storage.</td></tr>
+        </tbody>
+      </table>
+      <pre><code>cat &lt;&lt;EOF | oc -n "$NS" apply -f -
+apiVersion: storage.li9.com/v1alpha1
+kind: S3ArchivePolicy
+metadata:
+  name: app-data-archive
+spec:
+  s3BucketRef: $BUCKET_CR
+  storageClass: DEEP_ARCHIVE
+  prefixes:
+    - archive/
+  transitionAfterDays: 1
+  expireAfterDays: 30
+EOF
+oc -n "$NS" wait --for=condition=Ready s3archivepolicy/app-data-archive --timeout=10m
+li9s3 get-bucket-lifecycle-configuration --bucket "$BUCKET"
+printf 'archive candidate\n' &gt; /tmp/archive.txt
+li9s3 put-object --bucket "$BUCKET" --key archive/item.txt --body /tmp/archive.txt
+li9s3 restore-object --bucket "$BUCKET" --key archive/item.txt --restore-request '{"Days":1,"GlacierJobParameters":{"Tier":"Standard"}}'</code></pre>
+
+      <h2>Raw Lifecycle XML</h2>
+      <p>Use raw XML when a bucket needs exact S3 lifecycle semantics such as noncurrent-version expiration, object-size filters, tag filters, or multipart abort rules. Keep these documents in Git and validate them with <code>get-bucket-lifecycle-configuration</code> after reconciliation.</p>
+      <pre><code>cat &lt;&lt;'EOF' | oc -n "$NS" apply -f -
+apiVersion: storage.li9.com/v1alpha1
+kind: S3BucketLifecycle
+metadata:
+  name: app-data-lifecycle
+spec:
+  s3BucketRef: app-data
+  document: |
+    &lt;LifecycleConfiguration&gt;
+      &lt;Rule&gt;
+        &lt;ID&gt;abort-stale-multipart&lt;/ID&gt;
+        &lt;Status&gt;Enabled&lt;/Status&gt;
+        &lt;Filter&gt;&lt;Prefix&gt;uploads/&lt;/Prefix&gt;&lt;/Filter&gt;
+        &lt;AbortIncompleteMultipartUpload&gt;&lt;DaysAfterInitiation&gt;7&lt;/DaysAfterInitiation&gt;&lt;/AbortIncompleteMultipartUpload&gt;
+      &lt;/Rule&gt;
+    &lt;/LifecycleConfiguration&gt;
+EOF
+
+oc -n "$NS" wait --for=condition=Ready s3bucketlifecycle/app-data-lifecycle --timeout=10m
+li9s3 get-bucket-lifecycle-configuration --bucket "$BUCKET"</code></pre>
+
+      <h2>Restore Verification</h2>
+      <p>Archive-class objects are not ordinarily readable until restore metadata is active. During restore, the runtime rehydrates shard payloads back to the original storage nodes. When the restore window expires, the healer clears restore metadata and removes the temporary primary copy.</p>
+
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

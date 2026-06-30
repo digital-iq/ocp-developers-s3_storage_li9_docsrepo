@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Object Lock And Retention - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / S3 API</div>
+        <h1>Object Lock And Retention</h1>
+        <p class="lede">Object Lock must be enabled for the bucket before retention or legal hold APIs are used. Use this for immutable retention, not ordinary lifecycle cleanup.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-s3-api.html">All S3 API reference pages</a></p>
+
+      <details class="reference-setup">
+        <summary>Common AWS CLI setup</summary>
+      <p>Run this once for the target bucket. Replace <code>li9-s3-runtime</code> and <code>app-data</code> with your namespace and <code>S3Bucket</code> resource name.</p>
+      <pre><code>export NS=li9-s3-runtime
+export BUCKET_CR=app-data
+export BUCKET="$(oc -n "$NS" get s3bucket "$BUCKET_CR" -o jsonpath='{.status.bucketName}')"
+export SECRET="$(oc -n "$NS" get s3bucket "$BUCKET_CR" -o jsonpath='{.status.secretName}')"
+export ENDPOINT="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ENDPOINT_URL}' | base64 -d)"
+export AWS_ACCESS_KEY_ID="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)"
+export AWS_SECRET_ACCESS_KEY="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)"
+export AWS_REGION="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_REGION}' 2&gt;/dev/null | base64 -d || true)"
+export AWS_REGION="${AWS_REGION:-us-east-1}"
+export AWS_EC2_METADATA_DISABLED=true
+li9s3() {
+  aws --endpoint-url "$ENDPOINT" --region "$AWS_REGION" --no-verify-ssl s3api "$@"
+}</code></pre>
+      <p>To verify the setup, run:</p>
+      <pre><code>li9s3 head-bucket --bucket "$BUCKET"
+li9s3 list-objects-v2 --bucket "$BUCKET" --max-keys 1</code></pre>
+
+      </details>
+
+      <h2 id="object-lock-and-retention">Object Lock And Retention</h2>
+      <p>Object Lock must be enabled when the bucket is created. Use it for immutable retention, compliance evidence, and protected versions. Do not use Object Lock as an ordinary cleanup mechanism; lifecycle policies own cleanup, while Object Lock prevents deletion or shortening of protected versions.</p>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-s3-object-lock-retention-flow.png" alt="Object Lock retention flow. Object Lock applies immutable retention or legal hold controls to versioned objects before delete or overwrite operations." loading="lazy">
+        <figcaption>Use Object Lock for immutability requirements, not as a substitute for ordinary lifecycle expiration.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Control</th><th>Behavior</th><th>Operational Rule</th></tr></thead>
+        <tbody>
+          <tr><td>Governance retention</td><td>Blocks deletion unless the request has bypass permission and sends the bypass header.</td><td>Use for operational retention where privileged break-glass delete is allowed.</td></tr>
+          <tr><td>Compliance retention</td><td>Cannot be shortened or downgraded while active.</td><td>Use only when the retention period is approved and legally required.</td></tr>
+          <tr><td>Legal hold</td><td>Blocks deletion independently of retention date.</td><td>Use for case-based holds; remove explicitly when the hold is cleared.</td></tr>
+          <tr><td>Delete marker</td><td>No-version delete creates a delete marker on protected latest versions.</td><td>The protected version remains readable by explicit version ID.</td></tr>
+        </tbody>
+      </table>
+      <pre><code>LOCK_BUCKET="${BUCKET}-lock"
+li9s3 create-bucket --bucket "$LOCK_BUCKET" --object-lock-enabled-for-bucket
+li9s3 put-object-lock-configuration \
+  --bucket "$LOCK_BUCKET" \
+  --object-lock-configuration 'ObjectLockEnabled=Enabled,Rule={DefaultRetention={Mode=GOVERNANCE,Days=1}}'
+printf 'locked\n' &gt; /tmp/locked.txt
+LOCK_VERSION="$(li9s3 put-object --bucket "$LOCK_BUCKET" --key locked/item.txt --body /tmp/locked.txt --query VersionId --output text)"
+li9s3 get-object-retention --bucket "$LOCK_BUCKET" --key locked/item.txt --version-id "$LOCK_VERSION"
+li9s3 put-object-legal-hold --bucket "$LOCK_BUCKET" --key locked/item.txt --version-id "$LOCK_VERSION" --legal-hold Status=ON
+li9s3 get-object-legal-hold --bucket "$LOCK_BUCKET" --key locked/item.txt --version-id "$LOCK_VERSION"</code></pre>
+
+      <h2>Verify Protection</h2>
+      <p>Protected delete attempts should fail or create delete markers without removing the protected version. Security audit events are emitted when Object Lock blocks deletion, including the action, resource, reason, and protected version ID.</p>
+      <pre><code>li9s3 delete-object --bucket "$LOCK_BUCKET" --key locked/item.txt --version-id "$LOCK_VERSION" || true
+li9s3 get-object --bucket "$LOCK_BUCKET" --key locked/item.txt --version-id "$LOCK_VERSION" /tmp/locked-readback.txt
+cat /tmp/locked-readback.txt</code></pre>
+
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

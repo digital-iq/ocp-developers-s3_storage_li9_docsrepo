@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Installation Modes and Lifecycle Ownership - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / Platform</div>
+        <h1>Installation modes and lifecycle ownership.</h1>
+        <p class="lede">Li9 S3 has one runtime and one S3 API surface, but four supported lifecycle owners: OpenShift Operator, Helm, Linux packages, and Windows packages. Choose exactly one owner for a deployment target.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-platform.html">All platform reference pages</a></p>
+
+      <div class="callout">
+        This page is global on purpose. It explains how installation modes differ. Platform-specific details live in the OpenShift, Helm, Linux, and Windows reference pages.
+      </div>
+
+      <h2 id="installation-modes">Supported Modes</h2>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-platform-installation-modes-flow.png" alt="Installation ownership flow. Each installation mode owns its own lifecycle; mixing operator, Helm, and host package ownership in one runtime causes conflicts." loading="lazy">
+        <figcaption>Use one lifecycle owner per installation and remove the previous owner before switching deployment methods.</figcaption>
+      </figure>
+
+      <table>
+        <thead>
+          <tr><th>Mode</th><th>Lifecycle owner</th><th>Configuration surface</th><th>Use when</th><th>Reference</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>OpenShift Operator</td>
+            <td>OLM and Li9 S3 operator</td>
+            <td>CRDs such as <code>S3Storage</code>, <code>S3Bucket</code>, <code>S3BucketAccess</code>, lifecycle, policy, archive, replication, observability, and documentation CRs.</td>
+            <td>OpenShift is the target platform and bucket consumption is Kubernetes-native.</td>
+            <td><a href="reference-openshift-operator.html">OpenShift reference</a></td>
+          </tr>
+          <tr>
+            <td>Helm / Kubernetes</td>
+            <td>Helm release</td>
+            <td><code>values.yaml</code>, rendered Deployments, StatefulSets, Services, PVCs, Secrets, ServiceMonitors, and PrometheusRules.</td>
+            <td>Kubernetes is available, but OLM/operator lifecycle is not desired or not available.</td>
+            <td><a href="reference-helm-kubernetes.html">Helm reference</a></td>
+          </tr>
+          <tr>
+            <td>Linux Packages</td>
+            <td>RPM/DEB package manager and systemd</td>
+            <td>Host configuration files, systemd units, mounted disks, firewall rules, TLS files, and package repository state.</td>
+            <td>The runtime must run directly on Linux VMs or bare metal without Kubernetes owning services.</td>
+            <td><a href="reference-linux-host.html">Linux reference</a></td>
+          </tr>
+          <tr>
+            <td>Windows Packages</td>
+            <td>MSI/ZIP installer and Windows Service Control Manager</td>
+            <td>Host configuration files, Windows services, persistent volumes, firewall rules, TLS files, and package artifacts.</td>
+            <td>The runtime must run directly on Windows VMs or hosts without Kubernetes owning services.</td>
+            <td><a href="reference-windows-host.html">Windows reference</a></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="shared-runtime">What Stays The Same</h2>
+      <table>
+        <thead><tr><th>Area</th><th>Same across all modes</th><th>Where to read more</th></tr></thead>
+        <tbody>
+          <tr><td>S3 client behavior</td><td>AWS CLI and SDK clients use endpoint override, region, access key, secret key, and S3-compatible APIs.</td><td><a href="reference-s3-api.html">S3 API reference</a></td></tr>
+          <tr><td>Runtime services</td><td>Gateway, identity, policy, metadata, object, storage-node, KMS, audit, and healing services have the same responsibilities.</td><td><a href="/runtime/services.html">Runtime services</a></td></tr>
+          <tr><td>Data protection</td><td>Replication, erasure coding, metadata durability, write commit behavior, and degraded-mode expectations are product runtime behavior.</td><td><a href="reference-platform-data-protection-engines.html">Data protection</a></td></tr>
+          <tr><td>Observability</td><td>Metrics, audit delivery, request latency, storage-node errors, metadata quorum, KMS, healing, and replication signals are runtime signals.</td><td><a href="reference-platform-observability.html">Observability</a></td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="what-changes">What Changes By Mode</h2>
+      <table>
+        <thead><tr><th>Concern</th><th>OpenShift Operator</th><th>Helm</th><th>Linux</th><th>Windows</th></tr></thead>
+        <tbody>
+          <tr><td>Install action</td><td>Create OLM objects and <code>S3Storage</code>.</td><td>Run <code>helm upgrade --install</code>.</td><td>Install RPM/DEB packages.</td><td>Install MSI or unpack ZIP.</td></tr>
+          <tr><td>Upgrade action</td><td>Advance operator subscription/channel and reconcile CRs.</td><td>Upgrade chart release and values.</td><td>Upgrade packages node by node.</td><td>Upgrade MSI/ZIP node by node.</td></tr>
+          <tr><td>Configuration source</td><td>CR specs and operator defaults.</td><td>Chart values and rendered manifests.</td><td><code>/etc/li9-s3</code> files.</td><td><code>C:\ProgramData\Li9\S3</code> files.</td></tr>
+          <tr><td>Service manager</td><td>Kubernetes controllers.</td><td>Kubernetes controllers.</td><td>systemd.</td><td>Windows Service Control Manager.</td></tr>
+          <tr><td>Storage attachment</td><td>PVCs and StorageClasses.</td><td>PVCs and StorageClasses.</td><td>Mounted Linux disks/directories.</td><td>Mounted Windows volumes/directories.</td></tr>
+          <tr><td>Bucket self-service</td><td>Li9 CRDs, OBC/COSI where enabled, generated Kubernetes Secrets.</td><td>Runtime control API or S3 API, no Li9 CRDs.</td><td>Runtime control API or S3 API, no Kubernetes CRDs.</td><td>Runtime control API or S3 API, no Kubernetes CRDs.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="selection-rules">Selection Rules</h2>
+      <div class="doc-card-grid">
+        <div class="doc-card">
+          <div class="number">OCP</div>
+          <div>
+            <h3>Choose OpenShift Operator</h3>
+            <p>Use it when OpenShift is the production platform, OLM is available, and application teams should request buckets through Kubernetes APIs.</p>
+            <p><a href="install-openshift.html">Open installation guide</a></p>
+          </div>
+        </div>
+        <div class="doc-card">
+          <div class="number">HELM</div>
+          <div>
+            <h3>Choose Helm</h3>
+            <p>Use it when Kubernetes owns workloads, but the deployment is chart-driven without operator CRDs.</p>
+            <p><a href="install-helm.html">Open installation guide</a></p>
+          </div>
+        </div>
+        <div class="doc-card">
+          <div class="number">LIN</div>
+          <div>
+            <h3>Choose Linux packages</h3>
+            <p>Use it when hosts or VMs are the operational unit and systemd should own Li9 S3 services.</p>
+            <p><a href="install-linux.html">Open installation guide</a></p>
+          </div>
+        </div>
+        <div class="doc-card">
+          <div class="number">WIN</div>
+          <div>
+            <h3>Choose Windows packages</h3>
+            <p>Use it when Windows hosts or VMs are the operational unit and Windows services should own Li9 S3 services.</p>
+            <p><a href="install-windows.html">Open installation guide</a></p>
+          </div>
+        </div>
+      </div>
+
+      <h2 id="do-not-mix">Do Not Mix Control Planes</h2>
+      <table>
+        <thead><tr><th>Conflict</th><th>Why it is unsafe</th><th>Correct action</th></tr></thead>
+        <tbody>
+          <tr><td>Operator and Helm in the same namespace</td><td>Both can try to own the same Deployments, StatefulSets, Services, PVCs, Secrets, and monitoring resources.</td><td>Uninstall one mode before installing the other.</td></tr>
+          <tr><td>Host packages and Kubernetes-managed runtime on the same data paths</td><td>Two service managers can write to the same metadata, WAL, or object data paths.</td><td>Use separate hosts, namespaces, volumes, and endpoints.</td></tr>
+          <tr><td>Manual edits to generated resources</td><td>The lifecycle owner can overwrite changes or leave drift that is hard to diagnose.</td><td>Change CR specs, Helm values, or host config files instead.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="verification-entry-points">Verification Entry Points</h2>
+      <table>
+        <thead><tr><th>Mode</th><th>Health check</th><th>S3 client check</th></tr></thead>
+        <tbody>
+          <tr><td>OpenShift Operator</td><td><code>oc get subscription,csv</code>, <code>oc get s3storage</code>, pod/PVC/Service readiness.</td><td>Use generated <code>S3BucketAccess</code> Secret with AWS CLI endpoint override.</td></tr>
+          <tr><td>Helm</td><td><code>helm status</code>, rendered Kubernetes resources, pod/PVC/Service readiness.</td><td>Use chart-provisioned credentials or runtime control API credentials with AWS CLI endpoint override.</td></tr>
+          <tr><td>Linux</td><td><code>systemctl status li9-s3-storage.target</code> and <code>li9-s3ctl health</code>.</td><td>Use issued credentials and the Linux load balancer or host endpoint.</td></tr>
+          <tr><td>Windows</td><td><code>Get-Service Li9S3*</code> and <code>li9-s3ctl.exe health</code>.</td><td>Use issued credentials and the Windows load balancer or host endpoint.</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>High Availability Behavior - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / Runtime</div>
+        <h1>High availability and degraded-mode behavior.</h1>
+        <p class="lede">Li9 S3 should keep accepted writes durable, fail closed when metadata quorum or write protection is unsafe, and recover after service or node restart without returning false missing-object responses.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-platform.html">All platform reference pages</a></p>
+
+      <h2 id="expected-behavior">Expected Behavior</h2>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-platform-high-availability-behavior-flow.png" alt="High availability decision flow. Li9 S3 accepts writes only when metadata and data protection can make the operation durable." loading="lazy">
+        <figcaption>Use this page to understand degraded-mode behavior, split-brain avoidance, and safe failure semantics.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Failure</th><th>Expected Result</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Gateway pod or process restart</td><td>In-flight clients retry; accepted committed objects remain readable.</td><td>Gateway is stateless relative to durable object and metadata state.</td></tr>
+          <tr><td>Metadata leader restart</td><td>Writes pause or fail until quorum elects/recovers safely.</td><td>Metadata must not split brain.</td></tr>
+          <tr><td>One storage node outage with sufficient protection</td><td>Reads and writes continue if quorum/protection policy still allows it.</td><td>Replication or erasure coding tolerates the configured failure count.</td></tr>
+          <tr><td>Too many storage nodes lost</td><td>Writes fail instead of accepting unsafe data.</td><td>Durability policy cannot be satisfied.</td></tr>
+          <tr><td>Healing service restart</td><td>Foreground S3 operations continue; background repair resumes later.</td><td>Healing is asynchronous maintenance.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="openshift-restart-test">OpenShift Restart Test</h2>
+      <pre><code>oc -n li9-s3-operator delete pod -l app.kubernetes.io/name=li9-s3-operator
+oc -n li9-s3-operator rollout status deploy/li9-s3-operator --timeout=10m
+oc -n li9-s3-runtime delete pod -l app.kubernetes.io/name=metadata-service --wait=false
+oc -n li9-s3-runtime wait --for=condition=Ready s3storage/li9-s3 --timeout=20m
+oc -n li9-s3-runtime delete pod -l app.kubernetes.io/name=storage-node --wait=false
+oc -n li9-s3-runtime wait --for=condition=Ready s3storage/li9-s3 --timeout=20m</code></pre>
+
+      <h2 id="native-restart-test">Native Package Restart Test</h2>
+      <table>
+        <thead><tr><th>Platform</th><th>Command</th><th>Verification</th></tr></thead>
+        <tbody>
+          <tr><td>Linux</td><td><code>sudo systemctl restart li9-s3-storage.target</code></td><td><code>li9-s3ctl health</code> and AWS CLI object read/write.</td></tr>
+          <tr><td>Windows</td><td><code>Restart-Service Li9S3*</code></td><td><code>li9-s3ctl.exe health</code> and AWS CLI object read/write.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="client-test">Client-Side Integrity Test</h2>
+      <pre><code>dd if=/dev/urandom of=/tmp/li9-ha.bin bs=1M count=128
+aws --endpoint-url "$ENDPOINT" --region "$AWS_REGION" s3 cp /tmp/li9-ha.bin "s3://$BUCKET/ha/li9-ha.bin"
+aws --endpoint-url "$ENDPOINT" --region "$AWS_REGION" s3 cp "s3://$BUCKET/ha/li9-ha.bin" /tmp/li9-ha-read.bin
+sha256sum /tmp/li9-ha.bin /tmp/li9-ha-read.bin</code></pre>
+
+      <h2 id="promotion-rule">Promotion Rule</h2>
+      <p>Do not promote a release until it survives repeated operator/runtime restarts, one-node outage during sustained writes, metadata restart, storage-node restart, and post-recovery healing validation.</p>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

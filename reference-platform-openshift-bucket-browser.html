@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenShift Bucket Browser - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-openshift-bucket-browser.html">OpenShift bucket browser</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / Platform / OpenShift</div>
+        <h1>OpenShift RBAC bucket browser.</h1>
+        <p class="lede">The operator can deploy an OAuth-protected web UI for browsing bucket contents. The browser uses OpenShift identity and Kubernetes RBAC for interactive access; ordinary applications still use AWS-compatible credentials from <code>S3BucketAccess</code>.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-platform.html">All platform reference pages</a></p>
+
+      <h2 id="what-it-does">What It Does</h2>
+      <p>The bucket browser is an optional console surface owned by <code>S3Storage.spec.console</code>. When enabled, the operator deploys one <code>s3-console</code> Deployment with two containers: the Li9 S3 console app and the OpenShift OAuth proxy. Users authenticate through OpenShift OAuth, then the console checks the user's token with <code>SelfSubjectAccessReview</code> before showing buckets, prefixes, objects, upload, download, or delete actions.</p>
+
+      <figure class="docs-screenshot">
+        <img src="assets/screenshots/s3-console-bucket-browser.png" alt="Li9 S3 bucket browser showing one bucket, one folder prefix, and one object." loading="lazy">
+        <figcaption>Bucket root view. The screenshot is sanitized to remove cluster URL and test namespace while preserving the real UI structure.</figcaption>
+      </figure>
+
+      <figure class="docs-screenshot">
+        <img src="assets/screenshots/s3-console-prefix-browser.png" alt="Li9 S3 bucket browser showing a nested prefix inside a bucket." loading="lazy">
+        <figcaption>Nested prefix view. Folder-like navigation is derived from object key prefixes; Li9 S3 does not create separate folder objects unless the workload writes them.</figcaption>
+      </figure>
+
+      <h2 id="enable">Enable The Browser</h2>
+      <pre><code>apiVersion: storage.li9.com/v1alpha1
+kind: S3Storage
+metadata:
+  name: li9-s3
+  namespace: li9-s3-runtime
+spec:
+  console:
+    enabled: true
+    rbacNamespace: app-team
+    route:
+      enabled: true
+  exposure:
+    route:
+      enabled: false</code></pre>
+
+      <table>
+        <thead><tr><th>Field</th><th>Description</th><th>Default Or Guidance</th></tr></thead>
+        <tbody>
+          <tr><td><code>spec.console.enabled</code></td><td>Deploys the OpenShift OAuth-protected bucket browser.</td><td><code>false</code>. Enable only for OpenShift operator installs.</td></tr>
+          <tr><td><code>spec.console.route.enabled</code></td><td>Creates an OpenShift Route for the web UI.</td><td>Defaults to <code>true</code> when console is enabled. Set <code>false</code> for Service-only access.</td></tr>
+          <tr><td><code>spec.console.route.host</code></td><td>Optional fixed Route host for the browser.</td><td>Leave empty for an OpenShift-assigned host. Do not hard-code cluster-specific hosts in reusable manifests.</td></tr>
+          <tr><td><code>spec.console.rbacNamespace</code></td><td>Namespace used for the bucket-object RBAC checks.</td><td>Defaults to the runtime service namespace. Set to the tenant namespace when bucket browsing should be granted there.</td></tr>
+          <tr><td><code>spec.console.oauthProxyImage</code></td><td>Optional override for the OpenShift OAuth proxy image.</td><td>Leave unset unless the platform pins mirrored OpenShift images.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="grant-access">Grant Browser Access</h2>
+      <p>Grant users access to the virtual <code>s3buckets/objects</code> subresource in the namespace configured by <code>spec.console.rbacNamespace</code>. The resource name is the <code>S3Bucket</code> resource name, not the internal implementation bucket name.</p>
+      <pre><code>cat &lt;&lt;'EOF' | oc -n app-team apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: app-logs-browser-reader
+rules:
+  - apiGroups: ["storage.li9.com"]
+    resources: ["s3buckets/objects"]
+    resourceNames: ["app-logs"]
+    verbs: ["list", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: app-logs-browser-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: app-logs-browser-reader
+subjects:
+  - kind: User
+    apiGroup: rbac.authorization.k8s.io
+    name: alice@example.com
+EOF</code></pre>
+
+      <p>Use write verbs only for users who should upload or delete objects from the browser.</p>
+      <pre><code>cat &lt;&lt;'EOF' | oc -n app-team apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: app-logs-browser-writer
+rules:
+  - apiGroups: ["storage.li9.com"]
+    resources: ["s3buckets/objects"]
+    resourceNames: ["app-logs"]
+    verbs: ["list", "get", "create", "update", "delete"]
+EOF</code></pre>
+
+      <table>
+        <thead><tr><th>Browser Action</th><th>OpenShift RBAC Verb</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Show bucket in the sidebar</td><td><code>list</code></td><td>The console lists runtime buckets, maps them to <code>S3Bucket</code> resources, then hides buckets denied by RBAC.</td></tr>
+          <tr><td>List prefixes and objects</td><td><code>list</code></td><td>Applies to the selected bucket resource name.</td></tr>
+          <tr><td>Download object</td><td><code>get</code></td><td>Returns the object through the console app after RBAC approval.</td></tr>
+          <tr><td>Upload object</td><td><code>create</code> or <code>update</code></td><td>Either verb allows a browser upload.</td></tr>
+          <tr><td>Delete object</td><td><code>delete</code></td><td>Use separate roles for destructive access.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="verify">Verify</h2>
+      <pre><code>oc -n li9-s3-runtime wait s3storage/li9-s3 --for=condition=Ready --timeout=20m
+oc -n li9-s3-runtime get route s3-console
+oc -n app-team auth can-i list s3buckets.storage.li9.com/app-logs --subresource=objects --as=alice@example.com
+oc -n app-team auth can-i delete s3buckets.storage.li9.com/app-logs --subresource=objects --as=alice@example.com</code></pre>
+
+      <h2 id="boundary">Security Boundary</h2>
+      <p>The browser does not replace S3 API credentials. It is for interactive browsing through OpenShift identity. Applications and automation should continue to use <code>S3BucketAccess</code> generated Secrets, OBC, COSI, or runtime-issued AWS-compatible credentials. Browser RBAC does not grant access to the S3 gateway, and S3 access keys do not grant access to the browser.</p>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

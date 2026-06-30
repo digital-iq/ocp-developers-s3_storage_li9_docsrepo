@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bucket Subresources - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / S3 API</div>
+        <h1>Bucket Subresources</h1>
+        <p class="lede">Subresources store product-local configuration. AWS-only managed integrations are either rejected, ignored safely, or mapped to a Li9-local equivalent when implemented.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-s3-api.html">All S3 API reference pages</a></p>
+
+      <details class="reference-setup">
+        <summary>Common AWS CLI setup</summary>
+      <p>Run this once for the target bucket. Replace <code>li9-s3-runtime</code> and <code>app-data</code> with your namespace and <code>S3Bucket</code> resource name.</p>
+      <pre><code>export NS=li9-s3-runtime
+export BUCKET_CR=app-data
+export BUCKET="$(oc -n "$NS" get s3bucket "$BUCKET_CR" -o jsonpath='{.status.bucketName}')"
+export SECRET="$(oc -n "$NS" get s3bucket "$BUCKET_CR" -o jsonpath='{.status.secretName}')"
+export ENDPOINT="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ENDPOINT_URL}' | base64 -d)"
+export AWS_ACCESS_KEY_ID="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)"
+export AWS_SECRET_ACCESS_KEY="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)"
+export AWS_REGION="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_REGION}' 2&gt;/dev/null | base64 -d || true)"
+export AWS_REGION="${AWS_REGION:-us-east-1}"
+export AWS_EC2_METADATA_DISABLED=true
+li9s3() {
+  aws --endpoint-url "$ENDPOINT" --region "$AWS_REGION" --no-verify-ssl s3api "$@"
+}</code></pre>
+      <p>To verify the setup, run:</p>
+      <pre><code>li9s3 head-bucket --bucket "$BUCKET"
+li9s3 list-objects-v2 --bucket "$BUCKET" --max-keys 1</code></pre>
+
+      </details>
+
+      <h2 id="bucket-subresources">Bucket Subresources</h2>
+      <p>Bucket subresources store configuration on the Li9 S3 metadata plane and expose AWS-compatible request and response shapes. Use them when an application or automation already speaks S3 and expects configuration to be available through <code>aws s3api</code>. AWS-managed integrations are not silently emulated: they are either implemented as product-local behavior, rejected during validation, or stored only when the setting is a compatibility no-op.</p>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-s3-bucket-subresources-flow.png" alt="Bucket subresource configuration flow. Bucket subresources store S3-compatible or product-local configuration attached to one bucket." loading="lazy">
+        <figcaption>Use subresources for bucket-level behavior; AWS-only managed integrations should fail predictably rather than imply unsupported services.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Subresource</th><th>Current Behavior</th><th>How To Verify</th></tr></thead>
+        <tbody>
+          <tr><td>CORS</td><td>Stored and enforced for S3 preflight behavior.</td><td><code>put-bucket-cors</code>, <code>get-bucket-cors</code>, then browser/API preflight test.</td></tr>
+          <tr><td>Website</td><td>Index, error document, redirects, and object redirect metadata are served through the gateway when bucket policy allows public reads.</td><td><code>put-bucket-website</code>, upload <code>index.html</code>, then unsigned HTTPS GET.</td></tr>
+          <tr><td>Request payment</td><td>Requester Pays configuration round-trips and affects request-payer authorization semantics. It does not create billing records.</td><td><code>put-bucket-request-payment</code> and non-owner access with <code>--request-payer requester</code>.</td></tr>
+          <tr><td>Ownership controls and ACL compatibility</td><td>Owner-only ACL paths are accepted for AWS client compatibility; public or non-owner grants are rejected.</td><td><code>get-bucket-ownership-controls</code>, <code>get-bucket-acl</code>, and negative public ACL tests.</td></tr>
+          <tr><td>Metrics, analytics, inventory, intelligent-tiering</td><td>Configuration APIs persist locally. Inventory and metadata-table output are generated by <code>healing-service</code> where implemented.</td><td>List configuration APIs and report bucket inspection.</td></tr>
+        </tbody>
+      </table>
+      <pre><code>: "${APP_ORIGIN:?set the allowed application origin URL}"
+cat &gt; /tmp/cors.json &lt;&lt;EOF
+{
+  "CORSRules": [
+    {
+      "AllowedMethods": ["GET", "PUT"],
+      "AllowedOrigins": ["${APP_ORIGIN}"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["ETag"]
+    }
+  ]
+}
+EOF
+li9s3 put-bucket-cors --bucket "$BUCKET" --cors-configuration file:///tmp/cors.json
+li9s3 get-bucket-cors --bucket "$BUCKET"
+li9s3 put-bucket-website --bucket "$BUCKET" --website-configuration '{"IndexDocument":{"Suffix":"index.html"},"ErrorDocument":{"Key":"error.html"}}'
+li9s3 get-bucket-website --bucket "$BUCKET"
+li9s3 put-bucket-request-payment --bucket "$BUCKET" --request-payment-configuration Payer=Requester
+li9s3 get-bucket-request-payment --bucket "$BUCKET"</code></pre>
+
+      <h2>Operational Notes</h2>
+      <p>Use declarative operator CRs for Li9-managed automation such as lifecycle, archive policy, replication, and generated credentials. Use raw bucket subresource APIs when the caller is an S3 application, SDK, backup tool, or migration job that already manages bucket settings. Unsupported AWS-only services fail predictably with S3 XML errors rather than creating a misleading local configuration.</p>
+
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

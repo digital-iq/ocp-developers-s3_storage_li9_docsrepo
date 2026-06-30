@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local And Global Bucket Replication - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference</div>
+        <h1>Local and global bucket replication.</h1>
+        <p class="lede">Use <code>S3BucketReplication</code> when a bucket needs asynchronous copies for migration, disaster recovery, distribution, or operational separation. Local replication copies to another bucket in the same Li9 S3 runtime. Global replication copies to a remote S3-compatible endpoint through an <code>S3ReplicationTarget</code>.</p>
+      </section>
+
+      <div class="callout">
+        Replication here is bucket-to-bucket automation. It is not the same control as <code>S3Storage.spec.storage.data.protection</code>, which protects the data plane inside one storage deployment.
+      </div>
+
+      <h2 id="how-replication-works">How Replication Works</h2>
+      <p><code>S3BucketReplication</code> owns one replication configuration for a source bucket. Put multiple <code>rules[]</code> in that one CR when the bucket needs several prefixes, tag filters, priorities, or destinations. Do not create several replication CRs for the same source bucket; the runtime has one bucket replication document, so multiple owners would create last-writer-wins behavior or operator conflicts.</p>
+      <p>Replication is asynchronous. A matching object write is committed to the source bucket first. The metadata plane marks the source object as <code>PENDING</code>, then <code>healing-service</code> copies the body, metadata, tags, versions, and eligible delete markers on its normal cycle. Successful copies mark the source <code>COMPLETED</code>. Local destination objects are marked <code>REPLICA</code>; global destinations receive signed S3 PUT or DELETE requests.</p>
+      <table>
+        <thead>
+          <tr><th>Mode</th><th>Use it when</th><th>Destination</th><th>Failure behavior</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>Local</code></td><td>Copy within one Li9 S3 deployment for migration, classification, or in-cluster DR patterns.</td><td>Another bucket in the same runtime.</td><td>Missing bucket or transient runtime error goes to the durable replication outbox and then DLQ after retry exhaustion.</td></tr>
+          <tr><td><code>Global</code></td><td>Copy to another Li9 S3 cluster, ODF, MinIO, AWS-compatible endpoint, or a remote DR site.</td><td>Remote bucket on an <code>S3ReplicationTarget</code>.</td><td>Remote network, TLS, auth, or bucket errors go to the same durable outbox and retry path.</td></tr>
+        </tbody>
+      </table>
+      <figure class="docs-diagram">
+        <img src="assets/diagrams/s3-replication-flow.png" alt="Li9 S3 asynchronous bucket replication flow from S3BucketReplication CR through operator rendering, source metadata PENDING state, healing-service copy, destination replica commit, outbox retry, and metrics." loading="lazy">
+        <figcaption>Local replication copies inside the same Li9 S3 runtime. It is not a synchronous write quorum for the source bucket.</figcaption>
+      </figure>
+      <figure class="docs-diagram">
+        <img src="assets/diagrams/s3-global-replication-flow.png" alt="Li9 S3 global replication flow with S3ReplicationTarget, S3BucketReplication global rule, operator target registry, healing-service SigV4 client, remote S3 endpoint, retry outbox, and DLQ." loading="lazy">
+        <figcaption>Global replication uses a reusable target registry and signs remote S3 requests with the credentials from the referenced Secret.</figcaption>
+      </figure>
+
+      <h2 id="rule-ids-and-destinations">Rule IDs And Destinations</h2>
+      <p><code>rules[].id</code> is optional in the CRD. Use a stable ID in production manifests because it is the human-readable rule identifier returned by <code>get-bucket-replication</code> and used by operators to diagnose which rule matched or failed. Use stable IDs such as <code>reports-copy</code>, <code>logs-to-dr</code>, or <code>gold-dataset-copy</code>; changing an ID is a configuration change.</p>
+      <p>The destination bucket must exist before enabling the rule. For local replication it can be created through another <code>S3Bucket</code> CR or through the S3 API. For global replication it must exist on the remote endpoint and the referenced credentials must be allowed to write objects, tags, metadata, and delete markers if enabled. If the destination is missing, Li9 S3 does not block the source write; the replication task is recorded for retry and the source replication status can become <code>FAILED</code> until the destination appears and the outbox drains. That behavior is for recovery, not the preferred steady-state configuration.</p>
+
+      <h2 id="before-you-start">Before You Start</h2>
+      <p>Use a Ready source <code>S3Bucket</code> and its generated Secret. The endpoint in the Secret is internal unless the selected <code>S3Storage</code> exposes an OpenShift Route.</p>
+      <pre><code>export NS=li9-s3-runtime
+export SOURCE_CR=app-data
+export SOURCE_BUCKET="$(oc -n "$NS" get s3bucket "$SOURCE_CR" -o jsonpath='{.status.bucketName}')"
+export SECRET="$(oc -n "$NS" get s3bucket "$SOURCE_CR" -o jsonpath='{.status.secretName}')"
+export AWS_ACCESS_KEY_ID="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)"
+export AWS_SECRET_ACCESS_KEY="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)"
+export AWS_REGION="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_REGION}' | base64 -d)"
+export ENDPOINT="$(oc -n "$NS" get secret "$SECRET" -o jsonpath='{.data.AWS_ENDPOINT_URL}' | base64 -d)"
+export AWS_EC2_METADATA_DISABLED=true
+
+li9s3() {
+  aws --endpoint-url "$ENDPOINT" --region "$AWS_REGION" --no-verify-ssl s3api "$@"
+}</code></pre>
+
+      <h2 id="local-prefix-replication">Local Prefix Replication</h2>
+      <p>Create or select the destination bucket first, then attach a replication rule to the source bucket. The example uses one rule, but production buckets can use several rules in the same <code>S3BucketReplication</code> resource.</p>
+      <pre><code>export DEST_BUCKET="${SOURCE_BUCKET}-replica"
+
+li9s3 create-bucket --bucket "$DEST_BUCKET"
+
+cat &lt;&lt;EOF | oc -n "$NS" apply -f -
+apiVersion: storage.li9.com/v1alpha1
+kind: S3BucketReplication
+metadata:
+  name: app-data-replication
+spec:
+  s3BucketRef: app-data
+  rules:
+    - id: reports-copy
+      prefix: reports/
+      destination:
+        type: Local
+        bucketName: $DEST_BUCKET
+EOF
+
+oc -n "$NS" wait --for=condition=Ready s3bucketreplication/app-data-replication --timeout=10m
+li9s3 get-bucket-replication --bucket "$SOURCE_BUCKET"</code></pre>
+
+      <h2 id="global-prefix-replication">Global Prefix Replication</h2>
+      <p>Create one <code>S3ReplicationTarget</code> per remote endpoint and reuse it from bucket rules. The credentials Secret is deliberately separate from the replication rule so credential rotation and target validation are owned in one place.</p>
+      <pre><code>: "${REMOTE_ENDPOINT:?set remote S3-compatible endpoint URL}"
+: "${REMOTE_ACCESS_KEY_ID:?set remote replication access key}"
+: "${REMOTE_SECRET_ACCESS_KEY:?set remote replication secret key}"
+export REMOTE_REGION=li9-dr-1
+export REMOTE_BUCKET=app-data-dr
+
+oc -n "$NS" create secret generic remote-dr-s3-credentials \
+  --from-literal=AWS_ACCESS_KEY_ID="$REMOTE_ACCESS_KEY_ID" \
+  --from-literal=AWS_SECRET_ACCESS_KEY="$REMOTE_SECRET_ACCESS_KEY"
+
+cat &lt;&lt;EOF | oc -n "$NS" apply -f -
+apiVersion: storage.li9.com/v1alpha1
+kind: S3ReplicationTarget
+metadata:
+  name: remote-dr
+spec:
+  endpoint: $REMOTE_ENDPOINT
+  region: $REMOTE_REGION
+  addressingStyle: PathStyle
+  credentialsSecretRef:
+    name: remote-dr-s3-credentials
+---
+apiVersion: storage.li9.com/v1alpha1
+kind: S3BucketReplication
+metadata:
+  name: app-data-global-replication
+spec:
+  s3BucketRef: app-data
+  rules:
+    - id: audit-to-remote-dr
+      prefix: audit/
+      destination:
+        type: Global
+        bucketName: $REMOTE_BUCKET
+        globalTargetRef:
+          name: remote-dr
+EOF
+
+oc -n "$NS" wait --for=condition=Ready s3replicationtarget/remote-dr --timeout=10m
+oc -n "$NS" wait --for=condition=Ready s3bucketreplication/app-data-global-replication --timeout=10m</code></pre>
+
+      <h2 id="tag-filter-replication">Tag Filter Replication</h2>
+      <p>Use tag filters when only selected objects under a prefix are copied. Multiple tags are rendered as an AWS-compatible <code>And</code> filter.</p>
+      <pre><code>cat &lt;&lt;EOF | oc -n "$NS" apply -f -
+apiVersion: storage.li9.com/v1alpha1
+kind: S3BucketReplication
+metadata:
+  name: app-data-replication
+spec:
+  s3BucketRef: app-data
+  rules:
+    - id: reports-copy
+      prefix: reports/
+      destination:
+        type: Local
+        bucketName: $DEST_BUCKET
+    - id: gold-reports-copy
+      priority: 10
+      prefix: reports/
+      tags:
+        class: gold
+        team: analytics
+      destination:
+        type: Local
+        bucketName: $DEST_BUCKET
+        storageClass: STANDARD_IA
+EOF
+
+printf 'gold report\n' &gt; /tmp/gold-report.txt
+li9s3 put-object \
+  --bucket "$SOURCE_BUCKET" \
+  --key reports/gold.txt \
+  --body /tmp/gold-report.txt \
+  --tagging 'class=gold&amp;team=analytics'</code></pre>
+
+      <h2 id="delete-marker-replication">Delete Marker Replication</h2>
+      <p>Enable delete-marker replication only for prefix-only rules. AWS-compatible replication rejects enabled delete-marker replication on tag-based rules, and the operator validates that before sending anything to the runtime. Merge this rule into the same source bucket replication CR; do not create a second CR for the same bucket.</p>
+      <pre><code>cat &lt;&lt;EOF | oc -n "$NS" apply -f -
+apiVersion: storage.li9.com/v1alpha1
+kind: S3BucketReplication
+metadata:
+  name: app-data-replication
+spec:
+  s3BucketRef: app-data
+  rules:
+    - id: reports-copy
+      prefix: reports/
+      destination:
+        type: Local
+        bucketName: $DEST_BUCKET
+    - id: reports-delete-markers
+      prefix: deleted-reports/
+      deleteMarkerReplication: true
+      destination:
+        type: Local
+        bucketName: $DEST_BUCKET
+EOF</code></pre>
+
+      <h2 id="verify-replication">Verify Replication</h2>
+      <p>Replication is applied by the runtime healing service on its configured interval. Verify replication by waiting for the next cycle, then checking the destination object and replication status.</p>
+      <pre><code>printf 'replicated object\n' &gt; /tmp/replicated-object.txt
+li9s3 put-object \
+  --bucket "$SOURCE_BUCKET" \
+  --key reports/item.txt \
+  --body /tmp/replicated-object.txt
+
+# Wait for the healing-service replication cycle, then verify destination object.
+li9s3 head-object \
+  --bucket "$DEST_BUCKET" \
+  --key reports/item.txt
+
+li9s3 head-object \
+  --bucket "$SOURCE_BUCKET" \
+  --key reports/item.txt \
+  --query ReplicationStatus</code></pre>
+
+      <p>For global replication, verify with the remote endpoint credentials and endpoint URL:</p>
+      <pre><code>aws --endpoint-url "$REMOTE_ENDPOINT" \
+  --region "$REMOTE_REGION" \
+  s3api head-object \
+  --bucket "$REMOTE_BUCKET" \
+  --key audit/item.txt</code></pre>
+
+      <h2 id="field-reference">Field Reference</h2>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Required</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>spec.s3BucketRef</code></td><td>One of bucket ref or bucket name</td><td>Same-namespace <code>S3Bucket</code> resource. The operator inherits the target <code>S3Storage</code> from the bucket.</td></tr>
+          <tr><td><code>spec.bucketName</code></td><td>One of bucket ref or bucket name</td><td>Existing source bucket name for direct configuration when no <code>S3Bucket</code> CR is used.</td></tr>
+          <tr><td><code>spec.storageRef</code></td><td>No</td><td>Target runtime for direct <code>bucketName</code> mode.</td></tr>
+          <tr><td><code>spec.roleARN</code></td><td>No</td><td>Overrides the local replication role ARN written into generated XML. Defaults to the Li9 local replication role. Global replication uses <code>S3ReplicationTarget</code> credentials.</td></tr>
+          <tr><td><code>spec.rules</code></td><td>Yes</td><td>One or more replication rules for the source bucket. Keep all rules for one source bucket in one <code>S3BucketReplication</code> CR.</td></tr>
+          <tr><td><code>spec.rules[].id</code></td><td>No, recommended</td><td>Human-readable stable rule ID returned by S3-compatible <code>get-bucket-replication</code>. Use it for diagnostics, audit, and GitOps review.</td></tr>
+          <tr><td><code>spec.rules[].enabled</code></td><td>No</td><td>Defaults to <code>true</code>. Set to <code>false</code> to keep the rule in the config but disable matching.</td></tr>
+          <tr><td><code>spec.rules[].priority</code></td><td>No</td><td>AWS-compatible rule priority. Use when multiple rules may match the same object.</td></tr>
+          <tr><td><code>spec.rules[].prefix</code></td><td>No</td><td>Restricts replication to keys with this prefix.</td></tr>
+          <tr><td><code>spec.rules[].tags</code></td><td>No</td><td>Restricts replication to objects with all listed tags. Tag rules cannot enable delete-marker replication.</td></tr>
+          <tr><td><code>spec.rules[].destination.type</code></td><td>No</td><td><code>Local</code> by default. Set <code>Global</code> when the destination bucket is on an <code>S3ReplicationTarget</code>.</td></tr>
+          <tr><td><code>spec.rules[].destination.bucketName</code></td><td>Yes, unless bucketARN is set</td><td>Destination bucket name. For local replication this bucket is in the same Li9 runtime. For global replication this is the remote bucket name. The operator renders it as <code>arn:aws:s3:::bucketName</code>.</td></tr>
+          <tr><td><code>spec.rules[].destination.bucketARN</code></td><td>No</td><td>Explicit destination ARN for compatibility. Use <code>arn:aws:s3:::bucket</code> format.</td></tr>
+          <tr><td><code>spec.rules[].destination.storageClass</code></td><td>No</td><td>Destination storage class override, for example <code>STANDARD_IA</code>.</td></tr>
+          <tr><td><code>spec.rules[].destination.globalTargetRef.name</code></td><td>For Global</td><td>References the <code>S3ReplicationTarget</code> that contains endpoint, region, addressing style, and Secret binding.</td></tr>
+          <tr><td><code>spec.rules[].destination.globalTargetRef.namespace</code></td><td>No</td><td>Namespace of the target CR. Defaults to the <code>S3BucketReplication</code> namespace. The operator stores target registry entries as <code>namespace/name</code> to avoid collisions.</td></tr>
+          <tr><td><code>spec.rules[].deleteMarkerReplication</code></td><td>No</td><td>Defaults to <code>false</code>. Can be <code>true</code> only for non-tag rules.</td></tr>
+          <tr><td><code>S3ReplicationTarget.spec.endpoint</code></td><td>Yes</td><td>Remote S3-compatible endpoint URL.</td></tr>
+          <tr><td><code>S3ReplicationTarget.spec.region</code></td><td>No</td><td>SigV4 region. Defaults to <code>us-east-1</code> for AWS client compatibility when omitted.</td></tr>
+          <tr><td><code>S3ReplicationTarget.spec.addressingStyle</code></td><td>No</td><td><code>PathStyle</code> by default. Use <code>VirtualHostedStyle</code> only when DNS and TLS are prepared for bucket-host addressing.</td></tr>
+          <tr><td><code>S3ReplicationTarget.spec.credentialsSecretRef</code></td><td>Yes</td><td>Secret with <code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, and optional <code>AWS_SESSION_TOKEN</code>.</td></tr>
+          <tr><td><code>S3ReplicationTarget.spec.tls.caBundleSecretRef</code></td><td>No</td><td>Secret containing a PEM CA bundle for private remote endpoints. Defaults to key <code>ca.crt</code>.</td></tr>
+          <tr><td><code>S3ReplicationTarget.spec.tls.insecureSkipVerify</code></td><td>No</td><td>Disables remote certificate verification for exceptional diagnostics. Keep <code>false</code> in production and use <code>caBundleSecretRef</code> for private CAs.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="operator-generated-document">Operator Generated Document</h2>
+      <p>The runtime still consumes AWS-compatible XML because AWS CLI and SDK compatibility depend on that shape. The difference is ownership: users own the small CR, and the operator owns the generated document. This avoids hand-written XML in GitOps manifests and lets the operator validate the common footguns before reconciliation.</p>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

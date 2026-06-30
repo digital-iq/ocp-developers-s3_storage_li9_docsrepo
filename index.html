@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Li9 S3 Documentation</title>
+  <meta name="li9-docs-site" content="Unified documentation site">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+      <nav>
+        <a href="index.html">Overview</a>
+        <a href="/runtime/">Runtime</a>
+        <a href="install.html">Install</a>
+        <a href="cr-examples.html">CR Examples</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </nav>
+    </div>
+  </header>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title active" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+        <a class="sub" href="administration.html#buckets">Buckets and access</a>
+        <a class="sub" href="administration.html#lifecycle">Lifecycle policy and restore</a>
+        <a class="sub" href="administration.html#replication">Replication</a>
+        <a class="sub" href="administration.html#security">Security and encryption</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a class="sub" href="operations.html#performance">Performance</a>
+        <a class="sub" href="operations.html#observability">Metrics and logging</a>
+        <a class="sub" href="operations.html#recovery">Recovery</a>
+        <a class="sub" href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Upgrade</h3>
+        <a href="upgrade.html">Upgrade paths</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+        <a class="sub" href="/runtime/services.html">Runtime services</a>
+        <a class="sub" href="/runtime/architecture.html">Architecture</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Li9 S3 Storage documentation</div>
+        <h1>Li9 S3 Storage Overview</h1>
+        <p class="lede">Li9 S3 Storage runs on OpenShift, Linux, and Windows, providing a self-managed S3 endpoint with bucket provisioning, scoped credentials, policy enforcement, durable metadata, data protection, encryption, audit, and lifecycle automation.</p>
+        <figure class="product-map" aria-label="High-level Li9 S3 Storage product capability map">
+          <div class="product-map-entry">
+            <div>
+              <strong>Applications and administrators</strong>
+              <span>AWS CLI, SDKs, OpenShift workloads, platform operations</span>
+            </div>
+          </div>
+          <div class="product-map-core">
+            <div class="product-map-title">Li9 S3 Storage</div>
+            <div class="product-map-lanes">
+              <div class="product-map-lane">
+                <h2>Access and control</h2>
+                <ul>
+                  <li><svg aria-hidden="true" class="product-map-icon"><use href="assets/icons/product-map-icons.svg#icon-endpoint"></use></svg><span>S3-compatible endpoint</span></li>
+                  <li><svg aria-hidden="true" class="product-map-icon"><use href="assets/icons/product-map-icons.svg#icon-bucket"></use></svg><span>Bucket provisioning</span></li>
+                  <li><svg aria-hidden="true" class="product-map-icon"><use href="assets/icons/product-map-icons.svg#icon-credentials"></use></svg><span>Scoped credentials</span></li>
+                  <li><svg aria-hidden="true" class="product-map-icon"><use href="assets/icons/product-map-icons.svg#icon-policy"></use></svg><span>Policy enforcement</span></li>
+                </ul>
+              </div>
+              <div class="product-map-lane">
+                <h2>Data and metadata</h2>
+                <ul>
+                  <li><svg aria-hidden="true" class="product-map-icon"><use href="assets/icons/product-map-icons.svg#icon-metadata"></use></svg><span>Durable metadata</span></li>
+                  <li><svg aria-hidden="true" class="product-map-icon"><use href="assets/icons/product-map-icons.svg#icon-protection"></use></svg><span>Erasure coding or replication</span></li>
+                  <li><svg aria-hidden="true" class="product-map-icon"><use href="assets/icons/product-map-icons.svg#icon-encryption"></use></svg><span>Server-side encryption</span></li>
+                  <li><svg aria-hidden="true" class="product-map-icon"><use href="assets/icons/product-map-icons.svg#icon-pvc"></use></svg><span>PVC-backed persistence</span></li>
+                </ul>
+              </div>
+              <div class="product-map-lane">
+                <h2>Operations</h2>
+                <ul>
+                  <li><svg aria-hidden="true" class="product-map-icon"><use href="assets/icons/product-map-icons.svg#icon-audit"></use></svg><span>Audit trail</span></li>
+                  <li><svg aria-hidden="true" class="product-map-icon"><use href="assets/icons/product-map-icons.svg#icon-lifecycle"></use></svg><span>Lifecycle automation</span></li>
+                  <li><svg aria-hidden="true" class="product-map-icon"><use href="assets/icons/product-map-icons.svg#icon-metrics"></use></svg><span>Metrics and alerts</span></li>
+                  <li><svg aria-hidden="true" class="product-map-icon"><use href="assets/icons/product-map-icons.svg#icon-operator"></use></svg><span>Operator-managed delivery</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <figcaption>One product surface for S3 clients, bucket lifecycle, identity and policy, protected data placement, and day-two operations.</figcaption>
+        </figure>
+      </section>
+
+      <section class="section-band">
+        <h2>Get started by role</h2>
+        <div class="grid">
+          <div class="panel">
+            <h3>Platform administrator</h3>
+            <p>Install the operator, configure storage placement and failure domains, enable metrics, validate node maintenance, and expose bucket consumption workflows.</p>
+            <p><a class="button primary" href="install-openshift.html">Install on OpenShift</a></p>
+          </div>
+          <div class="panel">
+            <h3>Application engineer</h3>
+            <p>Request a bucket, mount the generated Secret, configure AWS CLI or SDK endpoint overrides, and validate object read/write behavior from a pod.</p>
+            <p><a class="button" href="/runtime/usage.html">Use a bucket</a></p>
+          </div>
+          <div class="panel">
+            <h3>Service owner</h3>
+            <p>Review data protection, feature boundaries, operational risk, performance expectations, and compatibility with S3 clients before onboarding workloads.</p>
+            <p><a class="button" href="/runtime/architecture.html">Review architecture</a></p>
+          </div>
+        </div>
+      </section>
+
+      <h2>Documentation sets</h2>
+      <div class="doc-card-grid">
+        <div class="doc-card">
+          <div class="number">01</div>
+          <div>
+            <h3>Installation</h3>
+            <p>Deploy through OLM, Helm, Linux packages, or Windows packages. Includes private registry and air-gapped guidance.</p>
+            <p><a href="install.html">Open installation docs</a></p>
+          </div>
+        </div>
+        <div class="doc-card">
+          <div class="number">02</div>
+          <div>
+            <h3>Administration</h3>
+            <p>Manage buckets, access, policies, lifecycle, archive, replication, encryption, quotas, object lock, and documentation exposure.</p>
+            <p><a href="administration.html">Open administration docs</a></p>
+          </div>
+        </div>
+        <div class="doc-card">
+          <div class="number">03</div>
+          <div>
+            <h3>Operations</h3>
+            <p>Operate performance, observability, scaling, node maintenance, PVC expansion, backup, recovery, and degraded-mode behavior.</p>
+            <p><a href="operations.html">Open operations docs</a></p>
+          </div>
+        </div>
+        <div class="doc-card">
+          <div class="number">04</div>
+          <div>
+            <h3>Upgrade</h3>
+            <p>Upgrade operator, runtime images, CRDs, Helm releases, and native packages while preserving data and compatibility.</p>
+            <p><a href="upgrade.html">Open upgrade docs</a></p>
+          </div>
+        </div>
+        <div class="doc-card">
+          <div class="number">05</div>
+          <div>
+            <h3>Reference</h3>
+            <p>CRD fields, S3 feature matrix, metrics, alerts, environment variables, API examples, and compatibility boundaries.</p>
+            <p><a href="reference.html">Open reference docs</a></p>
+          </div>
+        </div>
+        <div class="doc-card">
+          <div class="number">06</div>
+          <div>
+            <h3>Runtime internals</h3>
+            <p>Gateway, identity, policy, metadata, object, storage-node, KMS, audit, and healing service responsibilities.</p>
+            <p><a href="/runtime/services.html">Open runtime catalog</a></p>
+          </div>
+        </div>
+      </div>
+
+      <h2>Product capabilities</h2>
+      <p class="capability-note">Li9 S3 capabilities are split between the AWS-compatible S3 data plane and the platform layer that installs, secures, observes, and operates the service.</p>
+
+      <h3>S3 API and data-plane capabilities</h3>
+      <div class="table-scroll">
+      <table class="capability-table">
+        <thead>
+          <tr><th>Capability</th><th>Description</th><th>Operational notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Core bucket and object API</td><td>Create, delete, head, and list buckets; put, get, head, delete, copy, and list objects; AWS CLI and SDK endpoint override; AWS-style request IDs and XML errors.</td><td><a href="reference-s3-core-bucket-object-api.html">How to</a></td></tr>
+          <tr><td>Multipart upload</td><td>Create multipart upload, upload parts, upload part copy, list uploads, list parts, complete, and abort with checksum and metadata handling.</td><td><a href="reference-s3-multipart-upload.html">How to</a></td></tr>
+          <tr><td>Versioning and delete markers</td><td>Enabled and suspended versioning, null-version behavior, version listing, explicit version reads/deletes, delete-marker semantics, versioned copy, and per-version tagging.</td><td><a href="reference-s3-versioning-delete-markers.html">How to</a></td></tr>
+          <tr><td>Policies and authorization</td><td>AWS IAM/S3-style bucket policy evaluator with explicit allow/deny, principals, wildcards, policy variables, condition keys, TLS/user-agent/request-region context, and policy status.</td><td><a href="reference-s3-policies-authorization.html">How to</a></td></tr>
+          <tr><td>Object metadata and tagging</td><td>User metadata, common system metadata, website redirect metadata, bucket tags, object tags, explicit version tag operations, AWS tag limits, and reserved-prefix validation.</td><td><a href="reference-s3-object-metadata-tagging.html">How to</a></td></tr>
+          <tr><td>Checksums and payload integrity</td><td><code>Content-MD5</code>, SigV4 payload hash validation, aws-chunked trailers, flexible checksum headers, checksum-mode reads, object attributes, copy checksums, and multipart checksum aggregation.</td><td><a href="reference-s3-checksums-payload-integrity.html">How to</a></td></tr>
+          <tr><td>Encryption and KMS-compatible wrapping</td><td>Default SSE-S3, SSE-C, SSE-KMS, DSSE-KMS, bucket encryption configuration, KMS key IDs, encryption context, bucket-key state, local key rotation, and KMS-compatible JSON provider calls over mTLS.</td><td><a href="reference-s3-encryption-kms-compatible-wrapping.html">How to</a></td></tr>
+          <tr><td>Object Lock and retention</td><td>Governance and compliance retention, legal hold, default retention, governance bypass permission checks, retained-version delete protection, delete-marker behavior, and security audit events.</td><td><a href="reference-s3-object-lock-retention.html">How to</a></td></tr>
+          <tr><td>Lifecycle policy and restore workflow</td><td>Current and noncurrent expiration, transitions, incomplete multipart abort, expired delete marker cleanup, intelligent-tiering transitions, product-local archive/deep archive placement, and restore expiry cleanup.</td><td><a href="reference-s3-lifecycle-multi-tier-archive-restore.html">How to</a></td></tr>
+          <tr><td>Local and global replication</td><td>Local bucket replication inside one Li9 S3 runtime and global replication to a remote S3-compatible target, with prefix/tag filters, destination storage class override, version history, delete-marker replication where valid, replication status, retry outbox, and DLQ metrics.</td><td><a href="reference-s3-replication.html">How to</a></td></tr>
+          <tr><td>Bucket subresources</td><td>CORS, website, logging, metrics, analytics, inventory, intelligent-tiering, public access block, ownership controls, request payment, accelerate configuration, lifecycle, encryption, replication, and Object Lock configuration paths.</td><td><a href="reference-s3-bucket-subresources.html">How to</a></td></tr>
+          <tr><td>Inventory and metadata tables</td><td>Inventory configurations can produce CSV or Parquet reports into same-cluster destination buckets. Metadata table configurations can materialize product-local Parquet snapshots for S3 Tables-style consumption.</td><td><a href="reference-s3-inventory-metadata-tables.html">How to</a></td></tr>
+          <tr><td>S3 Select</td><td><code>SelectObjectContent</code> for CSV, JSON Lines, JSON Document, and Parquet with projection, filters, aliases, functions, aggregates, grouping, ordering, distinct, limits, compression, and supported scan ranges.</td><td><a href="reference-s3-select.html">How to</a></td></tr>
+          <tr><td>Range and conditional reads</td><td>GET/HEAD ranges, multipart <code>partNumber</code> reads, object attributes, ETag/date preconditions, response-header overrides for signed reads, public object reads where policy allows them, and AWS-style missing-object disclosure.</td><td><a href="reference-s3-range-conditional-reads.html">How to</a></td></tr>
+          <tr><td>S3 storage class and PVC placement</td><td>S3 API storage-class values, Kubernetes StorageClass-backed PVC placement, lifecycle transitions, archive/deep archive behavior, restore flow, and immediately readable infrequent-access archive class.</td><td><a href="reference-s3-storage-classes.html">How to</a></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>Runtime, infrastructure, security, and platform capabilities</h3>
+      <div class="table-scroll">
+      <table class="capability-table">
+        <thead>
+          <tr><th>Capability</th><th>What Li9 S3 provides</th><th>Operational notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Installation modes</td><td>OpenShift operator, Helm chart, Linux RPM/DEB, and Windows MSI/ZIP delivery tracks.</td><td><a href="reference-platform-installation-modes.html">How to</a></td></tr>
+          <tr><td>OpenShift operator control</td><td><code>S3Storage</code>, <code>S3Bucket</code>, <code>S3BucketAccess</code>, <code>S3BucketPolicy</code>, <code>S3BucketLifecycle</code>, <code>S3ArchivePolicy</code>, <code>S3ReplicationTarget</code>, <code>S3BucketReplication</code>, ObjectBucketClaim, COSI BucketClaim/BucketAccess, and generated workload Secrets.</td><td><a href="reference-openshift-operator.html">How to</a></td></tr>
+          <tr><td>OpenShift RBAC bucket browser</td><td>Optional OAuth-protected web UI for interactive bucket browsing, prefix navigation, upload, download, and delete operations governed by OpenShift RBAC instead of S3 access keys.</td><td><a href="reference-platform-openshift-bucket-browser.html">How to</a></td></tr>
+          <tr><td>Helm / Kubernetes control</td><td>Helm chart values, rendered Kubernetes resources, release-owned observability resources, Kubernetes services/PVCs, and non-CRD bucket provisioning paths.</td><td><a href="reference-helm-kubernetes.html">How to</a></td></tr>
+          <tr><td>Linux package control</td><td>RPM/DEB packages, systemd targets and services, host configuration files, local persistent paths, firewall rules, and package-driven upgrades.</td><td><a href="reference-linux-host.html">How to</a></td></tr>
+          <tr><td>Windows package control</td><td>MSI/ZIP packages, Windows services, host configuration files, persistent Windows paths, firewall rules, event logs, and package-driven upgrades.</td><td><a href="reference-windows-host.html">How to</a></td></tr>
+          <tr><td>Storage topology</td><td>S3 over PVC, full distributed storage, storage-plane-only, S3-plane-only, per-node PVC, shared PVC/external filesystem, dedicated archive PVC, and colocated or dedicated metadata placement.</td><td><a href="reference-platform-storage-topology.html">How to</a></td></tr>
+          <tr><td>Data protection engines</td><td>Erasure coding, replicated object backend, filesystem backend, all-shard commit behavior, shard write timeouts, fencing, degraded state reporting, and split-brain fail-closed behavior.</td><td><a href="reference-platform-data-protection-engines.html">How to</a></td></tr>
+          <tr><td>Metadata durability</td><td>Raft/KV/WAL metadata service with PVC-backed state, quorum, commit-after-protected-write semantics, snapshots/compaction path, leader behavior, and metrics.</td><td><a href="reference-platform-metadata-durability.html">How to</a></td></tr>
+          <tr><td>Identity and credentials</td><td>Separate S3 and web identities, generated scoped access credentials, owner/reader subjects, Kubernetes Secret projection, credential status in CRs, and cleanup through finalizers.</td><td><a href="reference-platform-identity-credentials.html">How to</a></td></tr>
+          <tr><td>Internal security</td><td>TLS between services, mTLS for internal KMS/audit paths, Kubernetes Secrets for runtime keys, bucket policy enforcement, encryption by default, and security audit event emission.</td><td><a href="reference-platform-internal-security.html">How to</a></td></tr>
+          <tr><td>Observability</td><td>Prometheus metrics from every Go service, operator reconcile metrics, ServiceMonitor, PrometheusRule, Grafana dashboards, latency/error/outbox/quorum/fencing/KMS/healing metrics.</td><td><a href="reference-platform-observability.html">How to</a></td></tr>
+          <tr><td>Audit and durable delivery</td><td>Audit service, gateway request/event outbox, access-log outbox, KMS audit outbox, retry behavior, dead-letter files, delivery metrics, and alerting.</td><td><a href="reference-platform-audit-durable-delivery.html">How to</a></td></tr>
+          <tr><td>Healing and maintenance</td><td>Healing service cycles for shard repair, lifecycle, replication, inventory, analytics, metadata-table reports, restore completion/expiry, multipart cleanup, and manual heal trigger.</td><td><a href="reference-platform-healing-maintenance.html">How to</a></td></tr>
+          <tr><td>High availability behavior</td><td>Gateway, object-service, bucket-service, KMS, audit, metadata, and storage-node restart/failure tests; backend failure mapping to S3 <code>InternalError</code>; no false missing-state responses during outages.</td><td><a href="reference-platform-high-availability-behavior.html">How to</a></td></tr>
+          <tr><td>Node placement</td><td>Node selectors, tolerations, failure-domain labels, storage node selection, and topology-aware placement for data and metadata components.</td><td><a href="reference-platform-node-placement.html">How to</a></td></tr>
+          <tr><td>PVC and capacity operations</td><td>PVC-backed data, metadata, archive, audit, KMS, identity, and service state; PVC expansion handling; deletion policy controls; finalizer-based cleanup.</td><td><a href="reference-platform-pvc-capacity-operations.html">How to</a></td></tr>
+          <tr><td>Artifact distribution</td><td>Quay images, OLM bundle/catalog, public Helm Pages chart artifact, optional internal Helm OCI mirror, native package artifacts, digest-pinned manifests, checksums, and install/upgrade/uninstall verification.</td><td><a href="reference-platform-packaging-release-automation.html">How to</a></td></tr>
+          <tr><td>Documentation delivery</td><td><code>S3Documentation</code> CR deploys a single docs pod that aggregates runtime and installation/operator content behind one endpoint.</td><td><a href="reference-platform-documentation-delivery.html">How to</a></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

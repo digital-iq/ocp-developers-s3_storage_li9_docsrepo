@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upgrade - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+      <nav>
+        <a href="index.html">Overview</a>
+        <a href="/runtime/">Runtime</a>
+        <a href="install.html">Install</a>
+        <a href="cr-examples.html">CR Examples</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a class="sub" href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Upgrade</h3>
+        <a class="active" href="upgrade.html">Upgrade paths</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Upgrade</div>
+        <h1>Upgrade operator, runtime services, charts, and native packages without losing data.</h1>
+        <p class="lede">Upgrade documentation separates packaging from runtime behavior. Updating the operator changes reconciliation logic and desired images; updating runtime services changes the S3 data path. Both require compatibility checks.</p>
+      </section>
+
+      <h2>Upgrade paths</h2>
+      <table>
+        <thead>
+          <tr><th>Path</th><th>Use when</th><th>Required validation</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Operator / OLM</td><td>OpenShift operator-managed deployments.</td><td>CSV succeeded, CRD conversion, status conditions, rollout health.</td></tr>
+          <tr><td>Helm</td><td>Chart-managed Kubernetes deployments.</td><td>Values compatibility, rendered manifests, no operator conflict in namespace.</td></tr>
+          <tr><td>Linux packages</td><td>VM or bare-metal Linux clusters.</td><td>Package upgrade, service restart order, disk path ownership, quorum.</td></tr>
+          <tr><td>Windows packages</td><td>Windows node deployments.</td><td>MSI/ZIP install state, service restart order, firewall and TLS configuration.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Pre-upgrade checklist</h2>
+      <ul>
+        <li>Confirm all buckets and access resources are reconciled.</li>
+        <li>Confirm metadata quorum is healthy and healing backlog is empty or understood.</li>
+        <li>Export CRs, Helm values, or package configuration before changing versions.</li>
+        <li>Run AWS CLI smoke tests before and after the upgrade.</li>
+        <li>Monitor gateway errors, object commit failures, metadata latency, and healing work during rollout.</li>
+      </ul>
+
+      <h2>Procedure Pages</h2>
+      <p>Use the page that matches the installation owner. Do not apply an operator upgrade procedure to a Helm or host-package installation.</p>
+      <ul>
+        <li><a href="install-openshift-upgrade.html">OpenShift Operator upgrade</a></li>
+        <li><a href="install-helm-upgrade.html">Helm Chart upgrade</a></li>
+        <li><a href="install-linux-upgrade.html">Linux Packages upgrade</a></li>
+        <li><a href="install-windows-upgrade.html">Windows Packages upgrade</a></li>
+        <li><a href="install-airgap-upgrade.html">Private Registry And Airgap upgrade</a></li>
+      </ul>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

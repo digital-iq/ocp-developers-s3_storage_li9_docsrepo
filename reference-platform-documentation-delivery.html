@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Documentation Delivery - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / Platform</div>
+        <h1>Documentation delivery.</h1>
+        <p class="lede">Li9 S3 documentation is delivered as one endpoint per installation, with shared runtime documentation and platform-specific installation or operator content shown together.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-platform.html">All platform reference pages</a></p>
+
+      <h2 id="delivery-model">Delivery Model</h2>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-platform-documentation-delivery-flow.png" alt="Documentation delivery flow. Each installation exposes one documentation endpoint assembled from runtime docs and installation-owner docs." loading="lazy">
+        <figcaption>Use documentation delivery when exposing product docs from the same installation that users operate.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Mode</th><th>Runtime Docs</th><th>Platform Docs</th><th>Endpoint</th></tr></thead>
+        <tbody>
+          <tr><td>OpenShift Operator</td><td>Runtime docs image/content.</td><td>Operator docs image/content.</td><td><code>S3Documentation</code> Deployment, Service, optional Route.</td></tr>
+          <tr><td>Helm</td><td>Runtime docs content.</td><td>Helm docs content.</td><td>Helm-managed docs workload or static chart output.</td></tr>
+          <tr><td>Linux</td><td>Runtime docs content.</td><td>Linux package docs content.</td><td>Host-served static docs or package artifact docs.</td></tr>
+          <tr><td>Windows</td><td>Runtime docs content.</td><td>Windows package docs content.</td><td>Host-served static docs or package artifact docs.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="openshift-cr">OpenShift Documentation CR</h2>
+      <pre><code>cat &lt;&lt;EOF | oc -n li9-s3-runtime apply -f -
+apiVersion: storage.li9.com/v1alpha1
+kind: S3Documentation
+metadata:
+  name: li9-s3-docs
+spec:
+  replicas: 1
+  exposure:
+    route:
+      enabled: true
+      tls: true
+      host: ""
+  docs:
+    runtime:
+      title: Li9 S3 Runtime Documentation
+    operator:
+      title: Li9 S3 Operator Documentation
+EOF
+oc -n li9-s3-runtime wait --for=condition=Ready s3documentation/li9-s3-docs --timeout=10m
+oc -n li9-s3-runtime get s3documentation li9-s3-docs -o jsonpath='{.status.url}{"
+"}'</code></pre>
+
+      <h2 id="endpoint-verification">Endpoint Verification</h2>
+      <p>After the documentation CR is Ready, verify both the root site and runtime section through the published URL.</p>
+      <pre><code>DOCS_URL="$(oc -n li9-s3-runtime get s3documentation li9-s3-docs -o jsonpath='{.status.url}')"
+curl -fkI "$DOCS_URL/"
+curl -fkI "$DOCS_URL/runtime/"</code></pre>
+
+      <h2 id="content-model">Content Model</h2>
+      <p>The documentation endpoint is intended for administrators and engineers. It contains installation ownership, prerequisites, configuration surfaces, verification steps, upgrade and uninstall impact, troubleshooting entry points, and runtime usage guidance without requiring source-code context.</p>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

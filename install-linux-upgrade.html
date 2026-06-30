@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Linux Packages Upgrade - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub active" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Linux Packages</div>
+        <h1>Linux Packages: Upgrade.</h1>
+        <p class="lede">Upgrade safely with pre-checks, risk controls, rollout verification, and rollback awareness.</p>
+      </section>
+
+      <h2>Upgrade</h2>
+      <p>Linux upgrades replace binaries and may restart systemd services. Keep the cluster healthy before upgrading nodes one at a time.</p>
+      <table>
+        <thead><tr><th>Risk</th><th>What Can Happen</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>Package restart</td><td>The service may restart after package installation.</td><td>Upgrade one node at a time and verify cluster health after each node.</td></tr>
+          <tr><td>Config incompatibility</td><td>New binary may require a new env value or reject an old value.</td><td>Re-render service env files with <code>li9-s3-render-config</code> before restart.</td></tr>
+          <tr><td>Metadata migration</td><td>Metadata format migration may be irreversible.</td><td>Take metadata backup or snapshot before upgrade.</td></tr>
+          <tr><td>Kernel or disk changes</td><td>OS patching can change disk or network behavior.</td><td>Separate OS maintenance from Li9 S3 package upgrade when possible.</td></tr>
+        </tbody>
+      </table>
+      <pre><code>export LI9_SCHEME=http
+export LI9_CONTROL_HOST=10.10.10.11
+export LI9_GATEWAY_HOST=10.10.10.11
+export LI9_STORAGE_NODE_URLS="${LI9_SCHEME}://10.10.10.11:9008,${LI9_SCHEME}://10.10.10.12:9008,${LI9_SCHEME}://10.10.10.13:9008"
+curl -fsS "${LI9_SCHEME}://${LI9_GATEWAY_HOST}:9000/v1/info"
+curl -fsS "${LI9_SCHEME}://${LI9_CONTROL_HOST}:9001/v1/info"
+sudo systemctl stop li9-s3-storage.target li9-s3-control.target li9-s3-gateway.target li9-s3-storage-node.target || true
+
+# RPM:
+sudo dnf upgrade -y li9-s3-storage
+
+# DEB:
+sudo apt-get update
+sudo apt-get install --only-upgrade -y li9-s3-storage
+
+sudo /opt/li9/s3-storage/bin/li9-s3-render-config \
+  --node-host 127.0.0.1 \
+  --control-host "${LI9_CONTROL_HOST}" \
+  --gateway-host "${LI9_GATEWAY_HOST}" \
+  --storage-node-urls "${LI9_STORAGE_NODE_URLS}" \
+  --write-quorum 2 \
+  --region li9-mgm01 \
+  --allowed-regions li9-mgm01,us-east-1
+sudo systemctl start li9-s3-storage-node.target
+sudo systemctl start li9-s3-control.target li9-s3-gateway.target || true
+sudo systemctl status 'li9-s3@*.service' --no-pager
+curl -fsS "${LI9_SCHEME}://${LI9_GATEWAY_HOST}:9000/v1/info"
+curl -fsS "${LI9_SCHEME}://${LI9_CONTROL_HOST}:9001/v1/info"</code></pre>
+
+      <h2>Post-Upgrade Verification</h2>
+      <p>After each node upgrade, verify local service health, cluster membership, metadata quorum, and an external S3 write/read/delete smoke test. Continue to the next node only after the current node is healthy and no repair or replication backlog is unexpectedly growing.</p>
+      <pre><code>sudo journalctl -u 'li9-s3@*.service' --since "15 minutes ago" --no-pager
+systemctl is-active li9-s3@storage-node.service
+curl -fsS "${LI9_SCHEME}://${LI9_GATEWAY_HOST}:9000/v1/info"
+curl -fsS "${LI9_SCHEME}://${LI9_CONTROL_HOST}:9001/v1/info"
+aws --endpoint-url "${S3_ENDPOINT}" s3api list-buckets</code></pre>
+
+      <h2>Rollback Guidance</h2>
+      <p>Package rollback is node-local, but runtime compatibility is cluster-wide. Do not downgrade one node below the supported cluster version if metadata WAL, erasure layout, encryption metadata, or API storage format changed. If rollback is approved, drain client traffic from the node, install the previous package, restore the previous config, and rejoin it only after validation.</p>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

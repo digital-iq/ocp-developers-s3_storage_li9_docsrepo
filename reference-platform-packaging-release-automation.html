@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Artifact Distribution And Verification - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / Release</div>
+        <h1>Artifact distribution and verification.</h1>
+        <p class="lede">Li9 S3 is delivered through separate artifact families for runtime images, the OpenShift operator and catalog, Helm charts, Linux packages, Windows packages, and documentation. Administrators should install from a consistent release set and verify digests or checksums before rollout.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-platform.html">All platform reference pages</a></p>
+
+      <h2 id="artifact-families">Artifact Families</h2>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-platform-packaging-release-automation-flow.png" alt="Packaging and release flow. Separate release artifacts provide runtime images, operator images, bundles, charts, and host packages." loading="lazy">
+        <figcaption>Use this page to identify the release artifacts required by each installation mode and verify they belong to the same release set.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Artifact Family</th><th>Used By</th><th>Verification</th></tr></thead>
+        <tbody>
+          <tr><td>Runtime images</td><td>Operator, Helm, and mirrored deployments.</td><td>Verify image digest and registry pull access before rollout.</td></tr>
+          <tr><td>Operator catalog and bundle</td><td>OpenShift OLM installation.</td><td>Verify catalog image, bundle image, package name, channel, and CSV readiness.</td></tr>
+          <tr><td>Helm chart</td><td>Kubernetes chart installation.</td><td>Verify chart version, chart digest or SHA-256, and rendered manifests.</td></tr>
+          <tr><td>Linux packages</td><td>RPM and DEB host installations.</td><td>Verify package checksums and package-manager signature/trust configuration.</td></tr>
+          <tr><td>Windows packages</td><td>MSI and ZIP host installations.</td><td>Verify package checksums and the Windows package source before installation.</td></tr>
+          <tr><td>Documentation content</td><td>OpenShift documentation endpoint and platform-specific docs.</td><td>Verify the published documentation URL and runtime documentation path.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="distribution-rules">Distribution Rules</h2>
+      <ul>
+        <li>Use one coherent release set for the selected installation mode.</li>
+        <li>Pin images by digest for production or disconnected environments.</li>
+        <li>Verify RPM, DEB, MSI, ZIP, and chart checksums before installation.</li>
+        <li>Mirror images, chart artifacts, and host packages into internal repositories before using an air-gapped installation path.</li>
+        <li>Keep release metadata with the change record so operations teams can reproduce the installed state.</li>
+      </ul>
+
+      <h2 id="artifact-checks">Artifact Checks</h2>
+      <pre><code>oc image info quay.io/li9/li9-operators:li9-s3-bundle-v1.1.0-alpha.40
+oc image info quay.io/li9/li9-operators:li9-s3-gateway-v1.1.0-alpha.15
+: "${LI9_HELM_REPO:?set to the public Helm repository or approved internal mirror URL}"
+helm repo add li9-s3-storage "${LI9_HELM_REPO}"
+helm repo update li9-s3-storage
+helm show chart li9-s3-storage/li9-s3-storage --version 1.1.0-alpha.15
+helm template li9-s3 li9-s3-storage/li9-s3-storage --version 1.1.0-alpha.15 --values values-li9-s3.yaml &gt; rendered.yaml</code></pre>
+
+      <h2 id="release-readiness">Administrator Readiness Checklist</h2>
+      <table>
+        <thead><tr><th>Check</th><th>Why It Matters</th></tr></thead>
+        <tbody>
+          <tr><td>Digest-pinned manifests</td><td>Prevents accidental image drift during reproducibility checks.</td></tr>
+          <tr><td>OLM install from catalog</td><td>Confirms the operator is discoverable through OpenShift Software Catalog.</td></tr>
+          <tr><td>Helm install from public Pages or approved internal mirror</td><td>Confirms the selected chart delivery path works.</td></tr>
+          <tr><td>Native package install on fresh VMs</td><td>Confirms host prerequisites and service registration are complete.</td></tr>
+          <tr><td>Airgap mirror documentation</td><td>Confirms operators can mirror images and packages into internal registries.</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reference - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+      <nav>
+        <a href="index.html">Overview</a>
+        <a href="/runtime/">Runtime</a>
+        <a href="install.html">Install</a>
+        <a href="cr-examples.html">CR Examples</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Upgrade</h3>
+        <a href="upgrade.html">Upgrade paths</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference</div>
+        <h1>Reference for runtime behavior and platform ownership.</h1>
+        <p class="lede">Use this page when you already know what you are trying to configure and need exact S3 behavior, runtime operations, or platform-specific ownership for OpenShift, Helm, Linux, or Windows.</p>
+      </section>
+
+      <section class="section-band">
+        <h2>How To Use This Reference</h2>
+        <div class="grid">
+          <div class="panel">
+            <h3>Choose the behavior layer</h3>
+            <p>Use S3 API reference for client behavior, runtime reference for durability and operations, and platform reference for the installation-specific control surface.</p>
+          </div>
+          <div class="panel">
+            <h3>Keep install modes separate</h3>
+            <p>Operator, Helm, Linux, and Windows distributions are separate delivery paths. Do not mix operator CRDs, Helm releases, and host package control planes in the same target.</p>
+          </div>
+          <div class="panel">
+            <h3>Validate from a workload</h3>
+            <p>After the platform reports healthy runtime state, test from AWS CLI or an AWS SDK configured with endpoint override, region, and issued credentials.</p>
+          </div>
+        </div>
+      </section>
+
+      <h2>Reference groups</h2>
+      <div class="doc-card-grid">
+        <div class="doc-card">
+          <div class="number">S3</div>
+          <div>
+            <h3>S3 API compatibility</h3>
+            <p>Bucket APIs, object APIs, multipart uploads, tags, metadata, policies, lifecycle, replication, encryption, Object Lock, S3 Select, and intentionally excluded AWS-only integrations.</p>
+            <p><a href="reference-s3-api.html">Open S3 API reference</a></p>
+          </div>
+        </div>
+        <div class="doc-card">
+          <div class="number">RUN</div>
+          <div>
+            <h3>Runtime and infrastructure</h3>
+            <p>Storage topology, data protection, metadata durability, identity, internal security, observability, audit, healing, and high availability behavior common to all platforms.</p>
+            <p><a href="reference-platform-storage-topology.html">Open runtime reference</a></p>
+          </div>
+        </div>
+        <div class="doc-card">
+          <div class="number">OCP</div>
+          <div>
+            <h3>OpenShift Operator</h3>
+            <p>OLM ownership, CRDs, OpenShift consumption APIs, OAuth-protected bucket browsing, Routes, PVCs, ServiceMonitor, PrometheusRule, and operator-managed documentation delivery.</p>
+            <p><a href="reference-openshift-operator.html">Open OpenShift reference</a></p>
+          </div>
+        </div>
+        <div class="doc-card">
+          <div class="number">HELM</div>
+          <div>
+            <h3>Helm / Kubernetes</h3>
+            <p>Chart values, rendered Kubernetes resources, release ownership, Helm upgrade/rollback behavior, and non-CRD bucket provisioning paths.</p>
+            <p><a href="reference-helm-kubernetes.html">Open Helm reference</a></p>
+          </div>
+        </div>
+        <div class="doc-card">
+          <div class="number">LIN</div>
+          <div>
+            <h3>Linux packages</h3>
+            <p>RPM/DEB lifecycle, systemd units, host paths, firewall, service logs, cluster bootstrap, node maintenance, and package upgrade behavior.</p>
+            <p><a href="reference-linux-host.html">Open Linux reference</a></p>
+          </div>
+        </div>
+        <div class="doc-card">
+          <div class="number">WIN</div>
+          <div>
+            <h3>Windows packages</h3>
+            <p>MSI/ZIP lifecycle, Windows services, host paths, firewall rules, event logs, cluster bootstrap, node maintenance, and package upgrade behavior.</p>
+            <p><a href="reference-windows-host.html">Open Windows reference</a></p>
+          </div>
+        </div>
+      </div>
+
+      <h2>Compatibility rule</h2>
+      <div class="callout">
+        Li9 S3 should document product-local S3-compatible behavior and integrations with interchangeable external systems. AWS-only managed services should stay out of scope unless the product provides a local equivalent.
+      </div>
+
+      <h2>OpenShift Operator CRD Ownership</h2>
+      <p>This section applies only to the OpenShift operator installation. Helm, Linux, and Windows installations use their platform reference pages instead of these CRDs.</p>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-flow.png" alt="Reference selection flow. Choose the API, platform owner, and operating workflow before applying a feature-specific configuration." loading="lazy">
+        <figcaption>Reference pages are organized by the question an engineer is trying to answer: S3 data-plane behavior, platform ownership, installation method, or runtime operation.</figcaption>
+      </figure>
+
+      <table>
+        <thead>
+          <tr><th>CRD</th><th>Primary purpose</th><th>Expected user</th><th>Output</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>S3Storage</code></td><td>Deploy and operate one Li9 S3 runtime instance.</td><td>Platform administrator</td><td>Deployments, StatefulSets, Services, PVCs, routes, observability resources, status conditions.</td></tr>
+          <tr><td><code>S3Bucket</code></td><td>Declare an application bucket on a selected storage instance.</td><td>Tenant admin or app team</td><td>Bucket state, endpoint references, generated implementation objects.</td></tr>
+          <tr><td><code>S3BucketAccess</code></td><td>Create scoped credentials and access rules for one bucket.</td><td>Application engineer</td><td>Kubernetes Secret with AWS-compatible access key, secret key, endpoint, bucket, and region.</td></tr>
+          <tr><td><code>S3BucketPolicy</code></td><td>Attach AWS-style policy behavior to a bucket.</td><td>Security/platform team</td><td>Policy applied through runtime policy service and reflected in status.</td></tr>
+          <tr><td><code>S3BucketLifecycle</code></td><td>Configure object lifecycle and expiration behavior.</td><td>Storage admin</td><td>Lifecycle rules delivered to runtime lifecycle processing.</td></tr>
+          <tr><td><code>S3ArchivePolicy</code></td><td>Attach bucket-level archive movement rules.</td><td>Storage admin</td><td>Archive policy status and runtime configuration.</td></tr>
+          <tr><td><code>S3ReplicationTarget</code></td><td>Configure reusable remote S3-compatible targets for global replication.</td><td>Storage admin</td><td>Target validation status and credentials binding.</td></tr>
+          <tr><td><code>S3BucketReplication</code></td><td>Configure local and global bucket replication rules.</td><td>Storage admin</td><td>Replication policy status and runtime configuration.</td></tr>
+          <tr><td><code>S3Documentation</code></td><td>Deploy a single documentation site for runtime and operator docs.</td><td>Platform administrator</td><td>One Deployment, one Service, optional OpenShift Route, and published URL.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>S3 API Scope</h2>
+      <table>
+        <thead>
+          <tr><th>Area</th><th>Supported direction</th><th>Boundary</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Bucket and object APIs</td><td>Primary AWS CLI/SDK compatibility target.</td><td>Clients must use endpoint override for the Li9 S3 gateway.</td></tr>
+          <tr><td>Multipart upload</td><td>Required for real workload compatibility and large objects.</td><td>Part commit must preserve object integrity under node restart and degraded storage state.</td></tr>
+          <tr><td>Bucket policy</td><td>AWS IAM/S3 policy language where it can be enforced locally.</td><td>AWS account-level services are not assumed.</td></tr>
+          <tr><td>Lifecycle, archive, replication</td><td>Product-local automation through the active platform control surface.</td><td>Rules must not depend on AWS-only services unless an interchangeable external target is configured.</td></tr>
+          <tr><td>Server-side encryption</td><td>Product-local KMS-compatible key handling.</td><td>External KMS integrations must be optional and replaceable.</td></tr>
+          <tr><td>Notifications and analytics</td><td>Out of default scope unless backed by local or interchangeable services.</td><td>AWS EventBridge, Lambda, CloudWatch, Glue, and account services are not required platform dependencies.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Default Operational Signals</h2>
+      <table>
+        <thead>
+          <tr><th>Signal</th><th>What it tells an operator</th><th>Where to look</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Gateway request latency and error rate</td><td>Client-visible S3 health and API compatibility failures.</td><td>User workload Prometheus, route metrics, gateway logs.</td></tr>
+          <tr><td>Metadata quorum and WAL lag</td><td>Whether the metadata plane can accept writes safely.</td><td>Metadata service metrics and the platform-specific health surface.</td></tr>
+          <tr><td>Protected write commit failures</td><td>Whether erasure coding or replication reached the required durability level.</td><td>Storage node metrics, object service metrics, alert rules.</td></tr>
+          <tr><td>Healing backlog</td><td>How much data must be repaired after node or PVC disruption.</td><td>Storage node metrics and operator status messages.</td></tr>
+          <tr><td>Bucket policy denials</td><td>Whether access failures are expected policy decisions or runtime errors.</td><td>Policy service metrics and audit logs.</td></tr>
+          <tr><td>Documentation endpoint status</td><td>Whether the documentation endpoint is reachable for the selected installation.</td><td><code>S3Documentation.status.url</code> for OpenShift, Helm release output, or host service status for native packages.</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

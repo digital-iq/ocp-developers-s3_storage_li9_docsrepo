@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenShift Operator Upgrade - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub active" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">OpenShift Operator</div>
+        <h1>OpenShift Operator: Upgrade.</h1>
+        <p class="lede">Upgrade safely with pre-checks, risk controls, rollout verification, and rollback awareness.</p>
+      </section>
+
+      <h2>Upgrade</h2>
+      <p>Operator upgrades can change the controller, CRD schema, runtime image defaults, and bundle metadata. Treat every production upgrade as a controlled rollout.</p>
+      <table>
+        <thead><tr><th>Risk</th><th>What Can Happen</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>CRD schema change</td><td>Existing CRs may fail validation or require field changes.</td><td>Run server-side dry-run against all CRs before approving the InstallPlan.</td></tr>
+          <tr><td>Runtime rollout</td><td>Pods restart and may temporarily reduce write availability if quorum is already degraded.</td><td>Confirm all conditions are healthy before upgrade and watch rollout one component at a time.</td></tr>
+          <tr><td>PVC expansion</td><td>Some storage classes require pod restart before filesystem resize is visible.</td><td>Let the operator perform ordered restarts and verify PVC capacity after each step.</td></tr>
+          <tr><td>Manual InstallPlan</td><td>Upgrade waits until an admin approves it.</td><td>Use <code>Manual</code> in production when change windows are required.</td></tr>
+        </tbody>
+      </table>
+      <pre><code>oc get s3storage -A
+oc get installplan -n li9-operators
+oc patch subscription -n li9-operators li9-s3-operator --type merge -p '{"spec":{"installPlanApproval":"Manual"}}'
+oc get installplan -n li9-operators
+# Review the pending InstallPlan name, then approve during the change window:
+oc patch installplan -n li9-operators INSTALL_PLAN_NAME --type merge -p '{"spec":{"approved":true}}'
+oc get csv -n li9-operators
+oc rollout status deploy -n li9-operators -l app.kubernetes.io/name=li9-s3-operator --timeout=10m
+oc get s3storage -A -o wide</code></pre>
+
+      <h2>Post-Upgrade Verification</h2>
+      <p>Verify the operator, CRD schema, runtime rollout, and S3 client behavior before closing the change window. A successful upgrade has a healthy CSV, Ready <code>S3Storage</code>, no stuck InstallPlans, no degraded StatefulSets, and a passing AWS CLI smoke test from a workload namespace.</p>
+      <pre><code>oc get csv,subscription,installplan -n li9-operators
+oc get s3storage -A -o wide
+oc get s3bucket,s3bucketaccess,s3bucketpolicy,s3bucketlifecycle,s3archivepolicy,s3replicationtarget,s3bucketreplication -A
+oc get pods,pvc,svc,route -n li9-s3-runtime -l app.kubernetes.io/part-of=li9-s3
+oc get events -A --field-selector type=Warning | grep -E 'li9-s3|storage.li9.com' || true</code></pre>
+
+      <h2>Rollback Guidance</h2>
+      <p>Rollback is safe only when the previous operator version understands the current CRD schema and runtime data format. If the upgrade changed CRD fields, metadata format, encryption provider behavior, or archive placement, prefer forward-fix unless release notes explicitly mark the downgrade path as supported.</p>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

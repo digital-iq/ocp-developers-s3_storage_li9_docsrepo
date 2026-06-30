@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Metadata Durability - Li9 S3 Storage</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Documentation</div>
+    </div>
+  </header>
+
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <a href="install-openshift.html">OpenShift Operator</a>
+        <a href="install-helm.html">Helm Chart</a>
+        <a href="install-linux.html">Linux Packages</a>
+        <a href="install-windows.html">Windows Packages</a>
+        <a href="install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="reference-s3-api.html">S3 API reference</a>
+        <a class="sub" href="reference-s3-core-bucket-object-api.html">Core bucket/object API</a>
+        <a class="sub" href="reference-s3-multipart-upload.html">Multipart upload</a>
+        <a class="sub" href="reference-s3-versioning-delete-markers.html">Versioning</a>
+        <a class="sub" href="reference-s3-policies-authorization.html">Policies</a>
+        <a class="sub" href="reference-s3-object-metadata-tagging.html">Metadata and tagging</a>
+        <a class="sub" href="reference-s3-checksums-payload-integrity.html">Checksums</a>
+        <a class="sub" href="reference-s3-encryption-kms-compatible-wrapping.html">Encryption</a>
+        <a class="sub" href="reference-s3-object-lock-retention.html">Object Lock</a>
+        <a class="sub" href="reference-s3-lifecycle-multi-tier-archive-restore.html">Lifecycle policy and restore</a>
+        <a class="sub" href="reference-s3-replication.html">Replication</a>
+        <a class="sub" href="reference-s3-bucket-subresources.html">Bucket subresources</a>
+        <a class="sub" href="reference-s3-inventory-metadata-tables.html">Inventory and tables</a>
+        <a class="sub" href="reference-s3-select.html">S3 Select</a>
+        <a class="sub" href="reference-s3-range-conditional-reads.html">Range and conditional reads</a>
+        <a class="sub" href="reference-s3-storage-classes.html">S3 storage class and PVC placement</a>
+        <a href="reference-platform.html">Platform reference</a>
+        <a class="sub" href="reference-platform-installation-modes.html">Installation modes</a>
+        <a class="sub" href="reference-platform-openshift-consumption-apis.html">OpenShift consumption</a>
+        <a class="sub" href="reference-platform-storage-topology.html">Storage topology</a>
+        <a class="sub" href="reference-platform-data-protection-engines.html">Data protection</a>
+        <a class="sub" href="reference-platform-metadata-durability.html">Metadata durability</a>
+        <a class="sub" href="reference-platform-identity-credentials.html">Identity and credentials</a>
+        <a class="sub" href="reference-platform-internal-security.html">Internal security</a>
+        <a class="sub" href="reference-platform-observability.html">Observability</a>
+        <a class="sub" href="reference-platform-audit-durable-delivery.html">Audit delivery</a>
+        <a class="sub" href="reference-platform-healing-maintenance.html">Healing</a>
+        <a class="sub" href="reference-platform-high-availability-behavior.html">High availability</a>
+        <a class="sub" href="reference-platform-node-placement.html">Node placement</a>
+        <a class="sub" href="reference-platform-pvc-capacity-operations.html">PVC capacity</a>
+        <a class="sub" href="reference-platform-packaging-release-automation.html">Packaging</a>
+        <a class="sub" href="reference-platform-documentation-delivery.html">Documentation delivery</a>
+        <a class="sub" href="cr-examples.html">CR examples</a>
+        <a class="sub" href="/runtime/usage.html">AWS CLI usage</a>
+      </div>
+    </aside>
+
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Reference / Runtime</div>
+        <h1>Metadata durability with Raft, KV, and WAL.</h1>
+        <p class="lede">Li9 S3 metadata is stored in a PVC-backed Raft/KV/WAL service. Object data is not considered safely committed until protected data writes and metadata commit rules both succeed.</p>
+      </section>
+
+      <p class="reference-back"><a href="reference-platform.html">All platform reference pages</a></p>
+
+      <h2 id="what-metadata-stores">What Metadata Stores</h2>      <figure class="docs-diagram">
+        <img src="assets/diagrams/reference-platform-metadata-durability-flow.png" alt="Metadata durability flow. PVC-backed Raft/KV/WAL metadata is the source of truth for bucket, object, credential, and async job state." loading="lazy">
+        <figcaption>Use metadata durability settings to protect control state separately from object payload placement.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Data</th><th>Examples</th><th>Durability Requirement</th></tr></thead>
+        <tbody>
+          <tr><td>Bucket state</td><td>Bucket names, regions, owner state, versioning state, Object Lock settings.</td><td>Committed through metadata quorum.</td></tr>
+          <tr><td>Object index</td><td>Keys, versions, delete markers, checksums, storage class, encryption metadata.</td><td>Committed after object payload protection succeeds.</td></tr>
+          <tr><td>Policy and lifecycle config</td><td>Bucket policies, lifecycle rules, replication rules, inventory and table configs.</td><td>Committed through metadata quorum and consumed by runtime services.</td></tr>
+          <tr><td>Async work state</td><td>Healing, replication, inventory, restore, and cleanup checkpoints.</td><td>Recoverable after service restart.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="placement-options">Placement Options</h2>
+      <table>
+        <thead><tr><th>Mode</th><th>When To Use</th><th>Tradeoff</th></tr></thead>
+        <tbody>
+          <tr><td>Dedicated metadata PVC</td><td>Shared data backends, production clusters, or environments with low-latency metadata disks.</td><td>Clear isolation and easier sizing, more PVCs.</td></tr>
+          <tr><td>Colocated with data PVC</td><td>Per-node RWO data layout where storage and metadata must land on the same nodes.</td><td>Fewer pods/PVCs, tighter coupling to storage-node lifecycle.</td></tr>
+          <tr><td>Host path in native packages</td><td>Linux or Windows installs where local disks are mounted directly.</td><td>Host operations must protect config, data, metadata, and WAL paths together.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="openshift-checks">OpenShift Checks</h2>
+      <pre><code># Dedicated metadata PVCs
+oc -n li9-s3-runtime get statefulset metadata-service
+oc -n li9-s3-runtime get pvc -l app.kubernetes.io/name=metadata-service
+
+# Colocated metadata with data pods
+oc -n li9-s3-runtime get statefulset storage-node
+oc -n li9-s3-runtime get pods -l app.kubernetes.io/name=storage-node -o wide
+oc -n li9-s3-runtime get s3storage li9-s3 -o jsonpath='{.status.conditions}' | python3 -m json.tool</code></pre>
+
+      <h2 id="health-signals">Health Signals</h2>
+      <ul>
+        <li>Metadata leader is elected and stable.</li>
+        <li>Quorum is available before accepting writes.</li>
+        <li>WAL fsync latency is within the target budget.</li>
+        <li>Snapshot and compaction age are bounded.</li>
+        <li>Object metadata updates do not appear without durable protected payload writes.</li>
+      </ul>
+
+      <h2 id="unsafe-states">Unsafe States</h2>
+      <p>If metadata quorum is lost, Li9 S3 should report storage unavailable instead of accepting writes or returning fabricated missing-object results. Split-brain handling is intentionally fail-closed.</p>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

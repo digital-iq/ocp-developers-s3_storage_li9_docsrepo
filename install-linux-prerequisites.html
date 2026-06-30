@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Linux Packages Prerequisites - Li9 S3 Operator</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="index.html">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="install.html">Overview</a>
+        <div class="install-group">
+          <a class="install-group-title" href="install-openshift.html">OpenShift Operator</a>
+          <a class="sub" href="install-openshift-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-openshift-installation.html">Installation</a>
+          <a class="sub" href="install-openshift-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-openshift-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-helm.html">Helm Chart</a>
+          <a class="sub" href="install-helm-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-helm-installation.html">Installation</a>
+          <a class="sub" href="install-helm-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-helm-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-linux.html">Linux Packages</a>
+          <a class="sub active" href="install-linux-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-linux-installation.html">Installation</a>
+          <a class="sub" href="install-linux-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-linux-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-windows.html">Windows Packages</a>
+          <a class="sub" href="install-windows-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-windows-installation.html">Installation</a>
+          <a class="sub" href="install-windows-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-windows-uninstall.html">Uninstall</a>
+        </div>
+        <div class="install-group">
+          <a class="install-group-title" href="install-airgap.html">Private Registry And Airgap</a>
+          <a class="sub" href="install-airgap-prerequisites.html">Prerequisites</a>
+          <a class="sub" href="install-airgap-installation.html">Installation</a>
+          <a class="sub" href="install-airgap-upgrade.html">Upgrade</a>
+          <a class="sub" href="install-airgap-uninstall.html">Uninstall</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="administration.html">Overview</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="operations.html">Core operations</a>
+        <a href="troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="reference.html">Reference index</a>
+        <a href="cr-examples.html">CR examples</a>
+      </div>
+    </aside>
+
+    <article class="docs-content">
+      <section class="hero-doc">
+        <div class="eyebrow">Linux Packages</div>
+        <h1>Linux Packages: Prerequisites.</h1>
+        <p class="lede">Prepare access, artifacts, storage, network, security, and disconnected sources before installing.</p>
+      </section>
+
+      <h2>Prerequisites</h2>
+      <h3>Online Prerequisites</h3>
+      <table>
+        <thead><tr><th>Check</th><th>Command Or Decision</th><th>Expected Result</th></tr></thead>
+        <tbody>
+          <tr><td>Hosts</td><td>Prepare 3 Linux nodes for production or 1 node for explicit single-node mode.</td><td>All hosts resolve each other by stable DNS or IP.</td></tr>
+          <tr><td>Package artifacts</td><td>RPM or DEB release artifacts and <code>checksums.txt</code> are reachable from the <a href="https://github.com/digital-iq/ocp-developers-s3_storage_li9_linuxrepo/releases/download/v1.1.0-alpha.14/">Linux package release</a>.</td><td><code>curl -I -L</code> returns HTTP 200 for the package URL required by the host OS.</td></tr>
+          <tr><td>Storage paths</td><td>Mount disks for data, metadata, logs, and optional archive.</td><td><code>/var/lib/li9/s3-storage</code> and <code>/var/log/li9/s3-storage</code> survive reboot and have enough capacity.</td></tr>
+          <tr><td>Firewall</td><td>Open client, health, and node-to-node ports.</td><td>Nodes can connect to each other and clients can reach the S3 endpoint.</td></tr>
+          <tr><td>Endpoint</td><td>Choose the gateway address exposed to S3 clients.</td><td>Clients can reach port <code>9000</code>; control-plane checks can reach port <code>9001</code>.</td></tr>
+          <tr><td>Load balancer</td><td>Configure DNS or LB for the S3 gateway when clients should not address a node directly.</td><td>Only healthy gateway nodes receive client traffic.</td></tr>
+        </tbody>
+      </table>
+      <pre><code>hostname -f
+ip addr
+df -h /var/lib/li9/s3-storage 2&gt;/dev/null || true
+getent passwd li9-s3 || true
+sudo ss -lntp | grep -E '900[0-9]|9010' || true
+: "${LI9_LINUX_RELEASE_BASE:?set from the Linux package release link above}"
+curl -I -L "${LI9_LINUX_RELEASE_BASE}/li9-s3-storage-1.1.0.alpha.14-1.x86_64.rpm"
+curl -I -L "${LI9_LINUX_RELEASE_BASE}/li9-s3-storage_1.1.0.alpha.14-1_amd64.deb"</code></pre>
+
+      <h3>Air-Gapped Prerequisites</h3>
+      <p>Mirror packages into an internal repository or copy release packages plus <code>checksums.txt</code> to each node. The installation commands stay the same after the internal repository is configured.</p>
+      <pre><code>: "${LI9_RPM_REPO_URL:?set internal RPM repository URL}"
+: "${LI9_DEB_REPO_URL:?set internal DEB repository URL}"
+: "${LI9_DEB_GPG_URL:?set internal DEB GPG key URL}"
+
+# RPM repository
+sudo tee /etc/yum.repos.d/li9-s3.repo &gt;/dev/null &lt;&lt;EOF
+[li9-s3]
+name=Li9 S3 Storage
+baseurl=${LI9_RPM_REPO_URL}
+enabled=1
+gpgcheck=1
+gpgkey=${LI9_RPM_REPO_URL}/RPM-GPG-KEY-li9
+EOF
+
+# DEB repository
+curl -fsSL "${LI9_DEB_GPG_URL}" | sudo gpg --dearmor -o /usr/share/keyrings/li9-s3.gpg
+echo "deb [signed-by=/usr/share/keyrings/li9-s3.gpg] ${LI9_DEB_REPO_URL} stable main" | sudo tee /etc/apt/sources.list.d/li9-s3.list
+sudo apt-get update</code></pre>
+    </article>
+  </main>
+  <footer>Li9 S3 unified documentation site</footer>
+  <script src="assets/site.js"></script>
+</body>
+</html>

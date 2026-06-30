@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Li9 S3 Storage Runtime Documentation</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">Li9 S3 Storage Runtime</div>
+      <nav>
+        <a href="/">Docs Home</a>
+        <a href="index.html">Overview</a>
+        <a href="usage.html">Usage</a>
+        <a href="services.html">Services</a>
+        <a href="architecture.html">Architecture</a>
+      </nav>
+    </div>
+  </header>
+  <main class="docs-shell">
+    <aside class="docs-sidebar">
+      <a class="sidebar-title" href="/">Li9 S3 Storage</a>
+      <div class="sidebar-section">
+        <h3>Installation</h3>
+        <a href="/install.html">Overview</a>
+        <a href="/install-openshift.html">OpenShift Operator</a>
+        <a href="/install-helm.html">Helm Chart</a>
+        <a href="/install-linux.html">Linux Packages</a>
+        <a href="/install-windows.html">Windows Packages</a>
+        <a href="/install-airgap.html">Private Registry And Airgap</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Administration</h3>
+        <a href="/administration.html">Overview</a>
+        <a class="sub" href="/administration.html#buckets">Buckets and access</a>
+        <a class="sub" href="/administration.html#security">Security and encryption</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Operations</h3>
+        <a href="/operations.html">Core operations</a>
+        <a class="sub" href="/troubleshooting.html">Troubleshooting</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <a href="/reference.html">Reference index</a>
+        <a class="sub" href="/cr-examples.html">CR examples</a>
+      </div>
+      <div class="sidebar-section">
+        <h3>Runtime</h3>
+        <a href="index.html">Overview</a>
+        <a href="usage.html">Usage</a>
+        <a href="services.html">Services</a>
+        <a href="architecture.html">Architecture</a>
+      </div>
+    </aside>
+    <article class="docs-content">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Production object storage for OpenShift</div>
+        <h1>S3-compatible storage built from isolated runtime services.</h1>
+        <p class="lede">Li9 S3 Storage gives platform teams a product-local S3 service for OpenShift: AWS CLI compatible access, bucket-scoped credentials, policy enforcement, durable metadata, erasure-coded or replicated data placement, lifecycle automation, audit trails, and KMS-style server-side encryption.</p>
+        <div class="button-row">
+          <a class="button primary" href="usage.html">Use from an application</a>
+          <a class="button" href="architecture.html">Review architecture</a>
+          <a class="button" href="services.html">Explore services</a>
+        </div>
+      </div>
+      <aside class="panel">
+        <h2>What the product delivers</h2>
+        <ul class="clean-list">
+          <li><strong>S3 endpoint:</strong> compatible with standard AWS CLI and SDK endpoint override flows.</li>
+          <li><strong>Bucket onboarding:</strong> credentials and endpoint information can be delivered through Kubernetes Secrets.</li>
+          <li><strong>Failure behavior:</strong> split brain fails closed instead of accepting divergent writes.</li>
+          <li><strong>Operational visibility:</strong> metrics, audit, access logs, health probes, and background repair are first-class concerns.</li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="section-band">
+      <h2>Choose the right path</h2>
+      <div class="grid">
+        <div class="panel role-card">
+          <div>
+            <div class="eyebrow">Application team</div>
+            <h3>Consume a bucket</h3>
+            <p>Use the endpoint, bucket name, region, access key, secret key, and optional session token from the generated Secret.</p>
+          </div>
+          <p><a class="button" href="usage.html">Open usage guide</a></p>
+        </div>
+        <div class="panel role-card">
+          <div>
+            <div class="eyebrow">Platform team</div>
+            <h3>Operate storage</h3>
+            <p>Decide protection mode, node placement, metadata topology, encryption, observability, and CR ownership boundaries.</p>
+          </div>
+          <p><a class="button" href="architecture.html">Open architecture</a></p>
+        </div>
+        <div class="panel role-card">
+          <div>
+            <div class="eyebrow">Service owner</div>
+            <h3>Assess fit</h3>
+            <p>Review which features are product-local, which are compatible with S3 clients, and which AWS-only integrations are intentionally out of scope.</p>
+          </div>
+          <p><a class="button" href="#feature-boundaries">Review boundaries</a></p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Primary Use Cases</h2>
+      <div class="decision-grid">
+        <div class="decision-card good">
+          <h3>Application object storage</h3>
+          <p>Use Li9 S3 when application pods need bucket/object APIs without binding the platform to an external cloud account.</p>
+        </div>
+        <div class="decision-card good">
+          <h3>OpenShift platform services</h3>
+          <p>Use it for internal logging, backup, data pipeline, and object bucket consumption workflows that need an S3-compatible target.</p>
+        </div>
+        <div class="decision-card good">
+          <h3>Controlled data governance</h3>
+          <p>Use product-local policy, lifecycle, archive, replication, audit, encryption, and object lock controls where cloud-only AWS services are not acceptable.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="feature-boundaries">
+      <h2>Feature Boundaries</h2>
+      <table>
+        <thead>
+          <tr><th>Area</th><th>Runtime responsibility</th><th>Important boundary</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>S3 API</td><td>Bucket and object operations, multipart uploads, tags, metadata, selected S3 control-plane APIs.</td><td>AWS-only integrations that require AWS-managed services are intentionally excluded unless there is a product-local equivalent.</td></tr>
+          <tr><td>Durability</td><td>Erasure coding, replication, all-shard commit, fencing, and healing.</td><td>Split brain is treated as unavailable storage rather than accepting divergent writes.</td></tr>
+          <tr><td>Security</td><td>S3 credentials, bucket access, bucket policy, TLS, audit, KMS-style local keys.</td><td>Secrets are currently Kubernetes Secret-backed unless an external secret manager is introduced later.</td></tr>
+          <tr><td>OpenShift</td><td>Operator, Helm, OBC/COSI compatibility, metrics, alerts, dashboards, routes.</td><td>Operator and Helm installations are separate installation modes and should not run on top of each other in the same target namespace.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Production Readiness Checklist</h2>
+      <div class="grid four">
+        <div class="panel metric">
+          <div class="metric-value">1</div>
+          <h3>Placement</h3>
+          <p>Storage and metadata nodes are selected through labels, affinity, tolerations, and explicit failure-domain labels.</p>
+        </div>
+        <div class="panel metric">
+          <div class="metric-value">2</div>
+          <h3>Protection</h3>
+          <p>Choose erasure coding for multi-node efficiency or replication for simpler small and single-node deployments.</p>
+        </div>
+        <div class="panel metric">
+          <div class="metric-value">3</div>
+          <h3>Observability</h3>
+          <p>Expose metrics, alerts, dashboards, audit, and access-log delivery before production traffic is moved.</p>
+        </div>
+        <div class="panel metric">
+          <div class="metric-value">4</div>
+          <h3>Recovery</h3>
+          <p>Validate node loss, pod restart, PVC expansion, degraded writes, and object integrity with real S3 clients.</p>
+        </div>
+      </div>
+    </section>
+    </article>
+  </main>
+  <script src="assets/site.js"></script>
+  <footer>Li9 S3 Storage runtime documentation image</footer>
+</body>
+</html>
