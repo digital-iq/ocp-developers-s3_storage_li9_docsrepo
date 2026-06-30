@@ -1,35 +1,35 @@
 {
   "component": "public-docs",
-  "publishedAt": "2026-06-30T17:32:42.405726+00:00",
+  "publishedAt": "2026-06-30T17:35:24.837964+00:00",
   "sources": [
     {
       "label": "Operator and OpenShift platform docs",
       "name": "operator",
-      "revision": "79c8289",
+      "revision": "8ef5b06",
       "status": "published to /"
     },
     {
       "label": "Runtime and S3 service docs",
       "name": "runtime",
-      "revision": "ce00370",
+      "revision": "2366e75",
       "status": "published to /runtime"
     },
     {
       "label": "Helm installation docs",
       "name": "helm",
-      "revision": "c2047a6",
+      "revision": "8d10f00",
       "status": "published to /"
     },
     {
       "label": "Linux native installation docs",
       "name": "linux",
-      "revision": "7b94330",
+      "revision": "b79cc56",
       "status": "published to /"
     },
     {
       "label": "Windows native installation docs",
       "name": "windows",
-      "revision": "76d4b5b",
+      "revision": "733268a",
       "status": "published to /"
     }
   ]
