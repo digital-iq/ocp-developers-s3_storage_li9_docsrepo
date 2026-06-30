@@ -8,6 +8,7 @@ import json
 import re
 import shutil
 import subprocess
+from urllib.parse import quote
 from pathlib import Path
 
 
@@ -139,6 +140,24 @@ def rewrite_root_relative_links(output: Path, public_base_path: str) -> None:
             page.write_text(updated, encoding="utf-8")
 
 
+def version_static_assets(output: Path, version: str) -> None:
+    version = quote(version, safe="")
+    pattern = re.compile(r'\b(href|src)="([^"#?]+?\.(?:css|js))"')
+
+    def replace(match: re.Match[str]) -> str:
+        attr = match.group(1)
+        value = match.group(2)
+        if re.match(r"^[a-z][a-z0-9+.-]*:", value, re.IGNORECASE) or value.startswith("//"):
+            return match.group(0)
+        return f'{attr}="{value}?v={version}"'
+
+    for page in output.rglob("*.html"):
+        content = page.read_text(encoding="utf-8")
+        updated = pattern.sub(replace, content)
+        if updated != content:
+            page.write_text(updated, encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--sources-root", default=".")
@@ -193,6 +212,7 @@ def main() -> int:
     )
     write_source_report(output, records)
     rewrite_root_relative_links(output, args.public_base_path)
+    version_static_assets(output, metadata["publishedAt"])
     print(json.dumps(metadata, indent=2, sort_keys=True))
     return 0
 
