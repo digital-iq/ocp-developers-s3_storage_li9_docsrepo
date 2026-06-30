@@ -1,0 +1,89 @@
+name: Publish Li9 S3 Documentation
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types:
+      - operator-docs-updated
+      - runtime-docs-updated
+      - helm-docs-updated
+      - linux-docs-updated
+      - windows-docs-updated
+      - release-docs-updated
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: li9-s3-public-docs
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout docs publisher
+        uses: actions/checkout@v5
+        with:
+          path: publisher
+
+      - name: Checkout operator docs source
+        uses: actions/checkout@v5
+        with:
+          repository: digital-iq/ocp-developers-s3_storage_li9_operators
+          ref: main
+          token: ${{ secrets.DOCS_SOURCE_TOKEN }}
+          path: publisher/_sources/operator
+
+      - name: Checkout runtime docs source
+        uses: actions/checkout@v5
+        with:
+          repository: digital-iq/ocp-developers-s3_storage-code
+          ref: main
+          token: ${{ secrets.DOCS_SOURCE_TOKEN }}
+          path: publisher/_sources/runtime
+
+      - name: Checkout Helm docs source
+        uses: actions/checkout@v5
+        with:
+          repository: digital-iq/ocp-developers-s3_storage_li9_helmchart
+          ref: main
+          token: ${{ secrets.DOCS_SOURCE_TOKEN }}
+          path: publisher/_sources/helmchart
+
+      - name: Checkout Linux docs source
+        uses: actions/checkout@v5
+        with:
+          repository: digital-iq/ocp-developers-s3_storage_linux_installer
+          ref: main
+          token: ${{ secrets.DOCS_SOURCE_TOKEN }}
+          path: publisher/_sources/linux-installer
+
+      - name: Checkout Windows docs source
+        uses: actions/checkout@v5
+        with:
+          repository: digital-iq/ocp-developers-s3_storage_windows_installer
+          ref: main
+          token: ${{ secrets.DOCS_SOURCE_TOKEN }}
+          path: publisher/_sources/windows-installer
+
+      - name: Build static site
+        working-directory: publisher
+        run: python3 scripts/build_site.py --sources-root . --output _site
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: publisher/_site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -15,8 +15,8 @@ owned by the component repositories:
 - `ocp-developers-s3_storage_windows_installer` for native Windows installation
   procedures.
 
-Component CI pipelines check out this repository, assemble a static site into
-`_site`, and publish the generated output to the `gh-pages` branch served by
+The `Publish Li9 S3 Documentation` workflow checks out the private source
+repositories, assembles a static site into `_site`, and publishes it through
 GitHub Pages.
 
 Public site:
@@ -27,8 +27,14 @@ https://digital-iq.github.io/ocp-developers-s3_storage_li9_docsrepo/
 
 ## Publication
 
-The public site is published by private component repositories after their own
-validation gates:
+The workflow runs on:
+
+- `workflow_dispatch` for manual publication.
+- `repository_dispatch` from component repositories after documentation or
+  release artifacts change.
+- `push` to this repository.
+
+Component repositories dispatch publication after their own validation gates:
 
 - Operator source CI after the operator documentation image is built.
 - Runtime source CI after the runtime documentation image is built.
@@ -36,17 +42,12 @@ validation gates:
 - Linux installer CI after public package release or docs-only changes.
 - Windows installer CI after public package release or docs-only changes.
 
-Required component repository secret:
+Required repository secrets:
 
-- `DOCS_REPO_DISPATCH_TOKEN`: token with read access to the private component
-  repositories and write access to this public documentation repository.
-
-Publication command used by component pipelines:
-
-```bash
-DOCS_SOURCE_TOKEN="${DOCS_REPO_DISPATCH_TOKEN}" \
-  python3 scripts/publish_site.py --publish
-```
+- `DOCS_SOURCE_TOKEN` in this repository: token with read access to the private
+  component source repositories.
+- `DOCS_REPO_DISPATCH_TOKEN` in component repositories: token with permission to
+  create `repository_dispatch` events in this public documentation repository.
 
 The published site also includes:
 
@@ -56,4 +57,4 @@ The published site also includes:
 - `/docs-sources.html` for a human-readable source revision report.
 
 Do not edit generated site output by hand. Change the owning component
-repository and let that component pipeline publish a new `gh-pages` revision.
+repository and let the workflow publish a new site.
