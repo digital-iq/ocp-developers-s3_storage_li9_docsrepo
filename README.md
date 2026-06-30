@@ -15,8 +15,8 @@ owned by the component repositories:
 - `ocp-developers-s3_storage_windows_installer` for native Windows installation
   procedures.
 
-The `Publish Li9 S3 Documentation` workflow checks out those private source
-repositories, assembles a static site into `_site`, and publishes it through
+Component CI pipelines check out this repository, assemble a static site into
+`_site`, and publish the generated output to the `gh-pages` branch served by
 GitHub Pages.
 
 Public site:
@@ -25,19 +25,28 @@ Public site:
 https://digital-iq.github.io/ocp-developers-s3_storage_li9_docsrepo/
 ```
 
-## Pipeline
+## Publication
 
-The workflow runs on:
+The public site is published by private component repositories after their own
+validation gates:
 
-- `workflow_dispatch` for manual publication.
-- `repository_dispatch` from component repositories after documentation or
-  release artifacts change.
-- `push` to this repository.
+- Operator source CI after the operator documentation image is built.
+- Runtime source CI after the runtime documentation image is built.
+- Helm chart CI after chart publication or docs-only changes.
+- Linux installer CI after public package release or docs-only changes.
+- Windows installer CI after public package release or docs-only changes.
 
-Required repository secret:
+Required component repository secret:
 
-- `DOCS_SOURCE_TOKEN`: token with read access to the private component source
-  repositories.
+- `DOCS_REPO_DISPATCH_TOKEN`: token with read access to the private component
+  repositories and write access to this public documentation repository.
+
+Publication command used by component pipelines:
+
+```bash
+DOCS_SOURCE_TOKEN="${DOCS_REPO_DISPATCH_TOKEN}" \
+  python3 scripts/publish_site.py --publish
+```
 
 The published site also includes:
 
@@ -47,4 +56,4 @@ The published site also includes:
 - `/docs-sources.html` for a human-readable source revision report.
 
 Do not edit generated site output by hand. Change the owning component
-repository and let the workflow publish a new site.
+repository and let that component pipeline publish a new `gh-pages` revision.
