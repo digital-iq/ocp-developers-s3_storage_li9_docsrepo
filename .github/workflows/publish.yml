@@ -91,3 +91,31 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify public GitHub Pages site
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -eu
+          base="${PAGE_URL%/}"
+          for attempt in $(seq 1 30); do
+            if curl -fsSL "${base}/assets/build.json" | grep -q '"operatorVersion"'; then
+              break
+            fi
+            if [ "${attempt}" -eq 30 ]; then
+              echo "Public documentation build metadata did not become available at ${base}/assets/build.json" >&2
+              exit 1
+            fi
+            sleep 10
+          done
+          curl -fsSL "${base}/index.html" | grep -q "Li9 S3"
+          for page in \
+            install-openshift-installation.html \
+            install-helm-installation.html \
+            install-linux-installation.html \
+            install-windows-installation.html \
+            reference-s3-core-bucket-object-api.html \
+            reference-platform-openshift-bucket-browser.html
+          do
+            curl -fsSI "${base}/${page}" >/dev/null
+          done

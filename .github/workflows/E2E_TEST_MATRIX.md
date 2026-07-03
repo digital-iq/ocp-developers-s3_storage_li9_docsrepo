@@ -36,11 +36,11 @@ flowchart LR
 
 | Feature area | Current coverage | Gap |
 | --- | --- | --- |
-| Multi-repo source aggregation | Pulls docs from product repositories and writes source revisions plus release metadata to `assets/docs-public-build.json`. | Public URL smoke from a clean client is still required after deployment. |
-| Static site build | Builds `_site`, injects `assets/build.json`, and runs `scripts/validate_site.py`. | Public URL smoke from a clean client is still required after deployment. |
-| Public publication | Publishes to Pages-like public target. | Needs public URL smoke from a clean client. |
+| Multi-repo source aggregation | Pulls docs from product repositories and writes source revisions plus release metadata to `assets/docs-public-build.json`. | Covered by `scripts/build_site.py`, `scripts/validate_site.py`, and the post-deploy public Pages smoke in `.github/workflows/publish.yml`. |
+| Static site build | Builds `_site`, injects `assets/build.json`, and runs `scripts/validate_site.py`. | Covered by the publish workflow before upload and by post-deploy checks for `assets/build.json` on the public Pages URL. |
+| Public publication | Publishes to Pages-like public target. | Covered by `actions/deploy-pages` plus post-deploy `curl` checks for the public root page, build metadata, install pages, and representative reference pages. |
 | Platform tracks | Operator, Helm, Linux, Windows documentation exists. | Needs per-track completeness assertions. |
-| Version display | `scripts/build_site.py` injects `operatorVersion`, `runtimeVersion`, `helmChartVersion`, `linuxInstallerVersion`, `windowsInstallerVersion`, `buildTag`, and `sourceRevision` into `assets/build.json`; the shared site JavaScript displays the operator/docs version badge. | Needs browser smoke after Pages deployment. |
+| Version display | `scripts/build_site.py` injects `operatorVersion`, `runtimeVersion`, `helmChartVersion`, `linuxInstallerVersion`, `windowsInstallerVersion`, `buildTag`, and `sourceRevision` into `assets/build.json`; the shared site JavaScript displays the operator/docs version badge. | Covered by the post-deploy public Pages smoke, which waits for `assets/build.json` and requires `operatorVersion`. |
 
 ## Prepared Missing Documentation Test Cases
 
