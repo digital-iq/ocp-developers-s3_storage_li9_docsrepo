@@ -54,7 +54,7 @@ This repository publishes the public Li9 S3 Storage documentation site.
   generated HTML in this repository.
 - Keep publication logic in `.github/workflows/publish.yml`,
   `scripts/build_site.py`, and `scripts/publish_site.py`.
-- The GitHub Pages workflow runs on the OpenShift ARC `ephemeral-runner`, the
+- The GitHub Pages workflow runs on the OpenShift ARC `mgm01-prd-ovh-gitops-runner`, the
   same runner family used by the component repositories.
 - The publication flow must not require public read access to private source
   repositories; use `DOCS_SOURCE_TOKEN`.
