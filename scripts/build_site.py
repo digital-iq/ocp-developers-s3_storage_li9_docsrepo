@@ -5,6 +5,7 @@ import argparse
 import datetime as dt
 import html
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -113,6 +114,68 @@ def write_source_report(output: Path, records: list[dict[str, str]]) -> None:
     (output / "docs-sources.html").write_text(page, encoding="utf-8")
 
 
+def read_text_if_exists(path: Path) -> str:
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def first_match(patterns: list[tuple[Path, str]], default: str = "unknown") -> str:
+    for path, pattern in patterns:
+        content = read_text_if_exists(path)
+        if not content:
+            continue
+        match = re.search(pattern, content, re.MULTILINE)
+        if match:
+            return match.group(1).strip().strip('"').strip("'")
+    return default
+
+
+def release_metadata(root: Path, records: list[dict[str, str]], published_at: str) -> dict[str, str]:
+    operator_revision = next((record["revision"] for record in records if record["name"] == "operator"), "unknown")
+    operator_version = os.environ.get("LI9_OPERATOR_VERSION") or first_match(
+        [
+            (root / "_sources/operator/docs/site/install-openshift-installation.html", r"LI9_OPERATOR_VERSION=([A-Za-z0-9._-]+)"),
+            (root / "_sources/operator/docs/site/install-airgap-installation.html", r"LI9_OPERATOR_VERSION=([A-Za-z0-9._-]+)"),
+        ]
+    )
+    runtime_version = os.environ.get("LI9_RUNTIME_VERSION") or first_match(
+        [
+            (root / "_sources/operator/docs/site/install-airgap-installation.html", r"LI9_RUNTIME_VERSION=([A-Za-z0-9._-]+)"),
+            (root / "_sources/runtime/VERSION", r"^(.+)$"),
+        ],
+        default=operator_version,
+    )
+    helm_version = os.environ.get("LI9_CHART_VERSION") or first_match(
+        [
+            (root / "_sources/helmchart/charts/li9-s3-storage/Chart.yaml", r"^version:\s*([A-Za-z0-9._-]+)\s*$"),
+            (root / "_sources/operator/docs/site/install-helm-installation.html", r"LI9_CHART_VERSION=([A-Za-z0-9._-]+)"),
+        ],
+        default=runtime_version,
+    )
+    linux_version = os.environ.get("LI9_LINUX_VERSION") or first_match(
+        [(root / "_sources/linux-installer/VERSION", r"^(.+)$")],
+        default=runtime_version,
+    )
+    windows_version = os.environ.get("LI9_WINDOWS_VERSION") or first_match(
+        [(root / "_sources/windows-installer/VERSION", r"^(.+)$")],
+        default=runtime_version,
+    )
+    source_revision = os.environ.get("GITHUB_SHA", operator_revision)
+    return {
+        "buildTag": os.environ.get("DOCS_BUILD_TAG", operator_version),
+        "component": "public-docs",
+        "helmChartVersion": helm_version,
+        "linuxInstallerVersion": linux_version,
+        "operatorVersion": operator_version,
+        "publishedAt": published_at,
+        "runtimeVersion": runtime_version,
+        "sourceRevision": source_revision,
+        "version": operator_version,
+        "windowsInstallerVersion": windows_version,
+    }
+
+
 def normalize_public_base_path(value: str) -> str:
     value = value.strip()
     if not value:
@@ -206,8 +269,14 @@ def main() -> int:
         "component": "public-docs",
         "sources": records,
     }
+    build_metadata = release_metadata(root, records, metadata["publishedAt"])
+    metadata["release"] = build_metadata
     (assets / "docs-public-build.json").write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    (assets / "build.json").write_text(
+        json.dumps(build_metadata, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     write_source_report(output, records)

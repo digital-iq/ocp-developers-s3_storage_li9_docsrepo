@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: ephemeral-runner
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -78,6 +78,10 @@ jobs:
       - name: Build static site
         working-directory: publisher
         run: python3 scripts/build_site.py --sources-root . --output _site --public-base-path /ocp-developers-s3_storage_li9_docsrepo
+
+      - name: Validate static site
+        working-directory: publisher
+        run: python3 scripts/validate_site.py --site-root _site
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
