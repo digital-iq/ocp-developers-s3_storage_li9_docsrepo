@@ -50,6 +50,60 @@ class LinkCollector(HTMLParser):
                 self.links.append((tag, value))
 
 
+class TextCollector(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.parts: list[str] = []
+
+    def handle_data(self, data: str) -> None:
+        value = " ".join(data.split())
+        if value:
+            self.parts.append(value)
+
+    @property
+    def text(self) -> str:
+        return " ".join(self.parts)
+
+
+class TableCollector(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.in_table = False
+        self.table_class = ""
+        self.current_cell: list[str] | None = None
+        self.current_row: list[str] | None = None
+        self.tables: list[tuple[str, list[list[str]]]] = []
+        self._active_rows: list[list[str]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attrs_dict = {name: value or "" for name, value in attrs}
+        if tag == "table":
+            self.in_table = True
+            self.table_class = attrs_dict.get("class", "")
+            self._active_rows = []
+        elif self.in_table and tag == "tr":
+            self.current_row = []
+        elif self.in_table and tag in {"td", "th"}:
+            self.current_cell = []
+
+    def handle_endtag(self, tag: str) -> None:
+        if self.in_table and tag in {"td", "th"} and self.current_cell is not None and self.current_row is not None:
+            self.current_row.append(" ".join(" ".join(self.current_cell).split()))
+            self.current_cell = None
+        elif self.in_table and tag == "tr" and self.current_row is not None:
+            self._active_rows.append(self.current_row)
+            self.current_row = None
+        elif tag == "table" and self.in_table:
+            self.tables.append((self.table_class, self._active_rows))
+            self.in_table = False
+            self.table_class = ""
+            self._active_rows = []
+
+    def handle_data(self, data: str) -> None:
+        if self.current_cell is not None:
+            self.current_cell.append(data)
+
+
 def is_external(value: str) -> bool:
     parsed = urlparse(value)
     return bool(parsed.scheme and parsed.scheme not in {"file"})
@@ -105,6 +159,136 @@ def validate(root: Path) -> list[str]:
     return errors
 
 
+def page_text(path: Path) -> str:
+    collector = TextCollector()
+    collector.feed(path.read_text(encoding="utf-8", errors="replace"))
+    return collector.text
+
+
+def require_page(errors: list[str], root: Path, relative: str) -> Path | None:
+    path = root / relative
+    if not path.exists():
+        errors.append(f"required documentation page is missing: {relative}")
+        return None
+    content = path.read_text(encoding="utf-8", errors="replace")
+    if len(content) < 3000:
+        errors.append(f"{relative} is too small to be a complete customer-facing page")
+    lower_text = page_text(path).lower()
+    for placeholder in ["lorem ipsum", "todo", "tbd", "placeholder", "coming soon"]:
+        if placeholder in lower_text:
+            errors.append(f"{relative} contains placeholder text: {placeholder}")
+    return path
+
+
+def validate_platform_tracks(root: Path) -> list[str]:
+    errors: list[str] = []
+    tracks = {
+        "openshift": ("OpenShift", "reference-openshift-operator.html"),
+        "helm": ("Helm", "reference-helm-kubernetes.html"),
+        "linux": ("Linux", "reference-linux-host.html"),
+        "windows": ("Windows", "reference-windows-host.html"),
+    }
+    stages = ("prerequisites", "installation", "upgrade", "uninstall")
+    for track, (label, reference_page) in tracks.items():
+        require_page(errors, root, f"install-{track}.html")
+        for stage in stages:
+            path = require_page(errors, root, f"install-{track}-{stage}.html")
+            if path is None:
+                continue
+            text = page_text(path)
+            lower_text = text.lower()
+            if label.lower() not in lower_text:
+                errors.append(f"{path.relative_to(root)} does not identify the {label} installation track")
+            if stage == "prerequisites":
+                if "online prerequisites" not in lower_text:
+                    errors.append(f"{path.relative_to(root)} must describe online prerequisites")
+                if "air-gapped prerequisites" not in lower_text:
+                    errors.append(f"{path.relative_to(root)} must describe air-gapped prerequisites")
+            else:
+                content = path.read_text(encoding="utf-8", errors="replace")
+                if "<pre><code" not in content:
+                    errors.append(f"{path.relative_to(root)} must include copy-paste command blocks")
+                expected_word = {"installation": "install", "upgrade": "upgrade", "uninstall": "uninstall"}[stage]
+                if expected_word not in lower_text:
+                    errors.append(f"{path.relative_to(root)} does not describe {stage} actions")
+        require_page(errors, root, reference_page)
+    if not (root / "troubleshooting.html").exists():
+        errors.append("troubleshooting.html is required for every public docs build")
+    return errors
+
+
+def collect_capability_reference_links(index_html: str) -> set[str]:
+    collector = TableCollector()
+    collector.feed(index_html)
+    links = set(re.findall(r'href="(reference-[^"#?]+\.html)"[^>]*>\s*How to\s*</a>', index_html))
+    # Keep this intentionally tied to capability tables: every row should expose a real reference link.
+    for table_class, rows in collector.tables:
+        if "capability-table" not in table_class:
+            continue
+        for row in rows[1:]:
+            if len(row) < 3:
+                continue
+            if "How to" not in row[-1]:
+                errors = getattr(collect_capability_reference_links, "_errors", [])
+                errors.append(f"capability row missing How to link: {' | '.join(row)}")
+                setattr(collect_capability_reference_links, "_errors", errors)
+    return links
+
+
+def validate_reference_pages(root: Path) -> list[str]:
+    errors: list[str] = []
+    index = root / "index.html"
+    if not index.exists():
+        return ["index.html is required for capability reference validation"]
+    if hasattr(collect_capability_reference_links, "_errors"):
+        delattr(collect_capability_reference_links, "_errors")
+    links = collect_capability_reference_links(index.read_text(encoding="utf-8", errors="replace"))
+    errors.extend(getattr(collect_capability_reference_links, "_errors", []))
+    if len(links) < 30:
+        errors.append(f"expected at least 30 capability reference links, found {len(links)}")
+    for link in sorted(links):
+        path = require_page(errors, root, link)
+        if path is None:
+            continue
+        content = path.read_text(encoding="utf-8", errors="replace")
+        text = page_text(path).lower()
+        if "class=\"docs-diagram\"" not in content:
+            errors.append(f"{link} must include an engineering docs diagram")
+        if "how to" not in text and "verify" not in text and "<pre><code" not in content and "<table" not in content:
+            errors.append(f"{link} must include usable how-to, verification, or decision-table content")
+    return errors
+
+
+def validate_screenshots(root: Path) -> list[str]:
+    errors: list[str] = []
+    required = {
+        "openshift-installed-operator.png": "install-openshift-installation.html",
+        "s3-console-bucket-browser.png": "install-openshift-installation.html",
+        "s3-console-prefix-browser.png": "reference-platform-openshift-bucket-browser.html",
+        "windows-installed-apps-uninstall.png": "install-windows-uninstall.html",
+        "windows-services-installed.png": "install-windows-installation.html",
+    }
+    for name, page in required.items():
+        image = root / "assets/screenshots" / name
+        if not image.exists():
+            errors.append(f"required screenshot is missing: assets/screenshots/{name}")
+            continue
+        if image.stat().st_size < 10_000:
+            errors.append(f"screenshot appears empty or truncated: assets/screenshots/{name}")
+        page_path = root / page
+        if page_path.exists() and f"assets/screenshots/{name}" not in page_path.read_text(encoding="utf-8", errors="replace"):
+            errors.append(f"{page} must reference assets/screenshots/{name}")
+        raw = image.read_bytes()
+        for pattern in FORBIDDEN_PATTERNS:
+            try:
+                decoded = raw.decode("latin1", errors="ignore")
+            except Exception:
+                decoded = ""
+            if decoded and pattern.search(decoded):
+                errors.append(f"assets/screenshots/{name} contains forbidden environment or secret pattern: {pattern.pattern}")
+    return errors
+
+
 def quay_pull_token(repository: str) -> str:
     query = urlencode({"service": "quay.io", "scope": f"repository:{repository}:pull"})
     request = Request(f"https://quay.io/v2/auth?{query}")
@@ -155,6 +339,9 @@ def main() -> int:
     if not root.exists():
         raise SystemExit(f"site root does not exist: {root}")
     errors = validate(root)
+    errors.extend(validate_platform_tracks(root))
+    errors.extend(validate_reference_pages(root))
+    errors.extend(validate_screenshots(root))
     if not args.skip_public_image_check:
         errors.extend(validate_public_li9_images(root))
     if errors:
