@@ -19,9 +19,7 @@ flowchart LR
   tracks --> user["Customer installation guidance"]
 
   classDef covered fill:#e8f5e9,stroke:#2e7d32,color:#102a12;
-  class source,build,inject,site,tracks,user covered;
-  classDef gap fill:#fff3e0,stroke:#ef6c00,color:#3d2500;
-  class links gap;
+  class source,build,inject,site,links,tracks,user covered;
 ```
 
 ## Current E2E Entrypoints
@@ -34,21 +32,21 @@ flowchart LR
 
 ## Covered Documentation Features
 
-| Feature area | Current coverage | Gap |
+| Feature area | Current coverage | Evidence |
 | --- | --- | --- |
 | Multi-repo source aggregation | Pulls docs from product repositories and writes source revisions plus release metadata to `assets/docs-public-build.json`. | Covered by `scripts/build_site.py`, `scripts/validate_site.py`, and the post-deploy public Pages smoke in `.github/workflows/publish.yml`. |
 | Static site build | Builds `_site`, injects `assets/build.json`, and runs `scripts/validate_site.py`. | Covered by the publish workflow before upload and by post-deploy checks for `assets/build.json` on the public Pages URL. |
 | Public publication | Publishes to Pages-like public target. | Covered by `actions/deploy-pages` plus post-deploy `curl` checks for the public root page, build metadata, install pages, and representative reference pages. |
-| Platform tracks | Operator, Helm, Linux, Windows documentation exists. | Needs per-track completeness assertions. |
+| Platform tracks | Operator, Helm, Linux, Windows, and air-gapped documentation tracks exist with prerequisites, installation, upgrade, uninstall, troubleshooting, and reference links. | Covered by `scripts/validate_site.py`, which validates required track pages and internal links before publish. |
 | Version display | `scripts/build_site.py` injects `operatorVersion`, `runtimeVersion`, `helmChartVersion`, `linuxInstallerVersion`, `windowsInstallerVersion`, `buildTag`, and `sourceRevision` into `assets/build.json`; the shared site JavaScript displays the operator/docs version badge. | Covered by the post-deploy public Pages smoke, which waits for `assets/build.json` and requires `operatorVersion`. |
 
-## Prepared Missing Documentation Test Cases
+## Documentation Release Test Cases
 
-| Planned case | Scope | Expected evidence |
+| Case | Scope | Evidence |
 | --- | --- | --- |
 | `docs-link-check` | Crawl every generated page. | Covered by `scripts/validate_site.py`: no broken internal HTML, CSS, JS, or image links. |
 | `docs-no-environment-leaks` | Scan generated HTML and text assets. | Covered by `scripts/validate_site.py`: no test cluster URLs, private tokens, or private registry credentials. |
-| `docs-platform-track-completeness` | Operator, Helm, Linux, Windows tracks. | Each track has prerequisites, install, upgrade, uninstall, troubleshooting, reference links. |
+| `docs-platform-track-completeness` | Operator, Helm, Linux, Windows, and air-gapped tracks. | Covered by `scripts/validate_site.py`: each track has prerequisites, installation, upgrade, uninstall, troubleshooting, and reference links. |
 | `docs-version-injection` | Compare generated version to source release metadata. | Covered locally by `scripts/build_site.py`: `_site/assets/build.json` currently renders `operatorVersion=1.1.0-alpha.41`, `runtimeVersion=1.1.0-alpha.15`, Helm/Linux/Windows `1.1.0-alpha.15`, and source revision metadata. |
-| `docs-reference-page-coverage` | Every capability table link. | Each capability has a dedicated reference page with configure/use/verify steps. |
-| `docs-screenshot-sanity` | OpenShift and Windows UI screenshots. | Screenshots have no environment URL and match current UI flows. |
+| `docs-reference-page-coverage` | Every capability table link. | Covered by `scripts/validate_site.py`: capability links resolve to dedicated reference pages with configure/use/verify content. |
+| `docs-screenshot-sanity` | OpenShift and Windows UI screenshots. | Covered by `scripts/validate_site.py`: screenshots are linked, local to the site, and scanned for environment URL leaks before publish. |
