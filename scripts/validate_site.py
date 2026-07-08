@@ -289,6 +289,40 @@ def validate_screenshots(root: Path) -> list[str]:
     return errors
 
 
+def normalize_release_version(value: str) -> str:
+    return value.replace(".alpha.", "-alpha.").replace(".alpha", "-alpha")
+
+
+def validate_rendered_release_versions(root: Path) -> list[str]:
+    errors: list[str] = []
+    build_path = root / "assets" / "build.json"
+    if not build_path.exists():
+        return ["assets/build.json is required for release version validation"]
+    build = json.loads(build_path.read_text(encoding="utf-8"))
+    allowed = {
+        normalize_release_version(str(build[key]))
+        for key in (
+            "helmChartVersion",
+            "linuxInstallerVersion",
+            "operatorVersion",
+            "runtimeVersion",
+            "windowsInstallerVersion",
+        )
+        if build.get(key)
+    }
+    version_pattern = re.compile(r"\b\d+\.\d+\.\d+(?:-|[.])alpha(?:-|[.])?\d+\b")
+    for path in root.rglob("*.html"):
+        content = path.read_text(encoding="utf-8", errors="replace")
+        for match in sorted(set(version_pattern.findall(content))):
+            normalized = normalize_release_version(match)
+            if normalized not in allowed:
+                errors.append(
+                    f"{path.relative_to(root)} contains release version {match}, "
+                    f"which is not present in assets/build.json"
+                )
+    return errors
+
+
 def quay_pull_token(repository: str) -> str:
     query = urlencode({"service": "quay.io", "scope": f"repository:{repository}:pull"})
     request = Request(f"https://quay.io/v2/auth?{query}")
@@ -342,6 +376,7 @@ def main() -> int:
     errors.extend(validate_platform_tracks(root))
     errors.extend(validate_reference_pages(root))
     errors.extend(validate_screenshots(root))
+    errors.extend(validate_rendered_release_versions(root))
     if not args.skip_public_image_check:
         errors.extend(validate_public_li9_images(root))
     if errors:

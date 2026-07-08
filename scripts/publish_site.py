@@ -108,7 +108,7 @@ def publish_branch(root: Path, repo_url: str, branch: str, env: dict[str, str]) 
         if changed.returncode == 0:
             print("public documentation site is already up to date")
             return
-        timestamp = dt.datetime.now(dt.UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
+        timestamp = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         run(["git", "commit", "-m", f"Publish Li9 S3 documentation {timestamp}"], cwd=publish_dir)
         run(["git", "push", "origin", branch], cwd=publish_dir, env=env)
 

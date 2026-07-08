@@ -265,7 +265,7 @@ def main() -> int:
     assets = output / "assets"
     assets.mkdir(exist_ok=True)
     metadata = {
-        "publishedAt": dt.datetime.now(dt.UTC).isoformat(),
+        "publishedAt": dt.datetime.now(dt.timezone.utc).isoformat(),
         "component": "public-docs",
         "sources": records,
     }
